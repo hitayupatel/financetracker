@@ -1,0 +1,57 @@
+app:
+  name: "Finance Minister"
+  version: "1.0.0"
+
+database:
+  path: "data/finance.db"
+
+llm:
+  provider: "ollama"
+  base_url: "http://localhost:11434"
+  model: "llama3.2"
+  temperature: 0.3
+
+categories:
+  income:
+    - Salary
+    - Freelance
+    - Interest
+    - Dividends
+    - Refunds
+    - Other Income
+  expense:
+    - Groceries
+    - Dining
+    - Transport
+    - Utilities
+    - Rent/Mortgage
+    - Healthcare
+    - Entertainment
+    - Shopping
+    - Subscriptions
+    - Education
+    - Travel
+    - Insurance
+    - Personal Care
+    - Gifts
+    - Other Expense
+  investment:
+    - Stocks
+    - Mutual Funds
+    - ETFs
+    - Crypto
+    - Real Estate
+    - 401k/IRA
+    - Other Investment
+  savings:
+    - Emergency Fund
+    - Goal Savings
+    - Other Savings
+
+csv_import:
+  date_formats:
+    - "%Y-%m-%d"
+    - "%m/%d/%Y"
+    - "%d/%m/%Y"
+    - "%d-%m-%Y"
+    - "%m-%d-%Y"
