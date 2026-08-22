@@ -1,16 +1,18 @@
 """Accounts page - Manage accounts."""
 
 import streamlit as st
-from src.accounts import create_account, get_all_accounts, deactivate_account, get_net_worth, recalculate_balance
+from src.accounts import create_account, get_all_accounts, update_account, deactivate_account, get_net_worth, recalculate_balance
 
 
 def render():
     st.title("🏦 Accounts")
-    tab_view, tab_add = st.tabs(["My Accounts", "Add Account"])
+    tab_view, tab_add, tab_edit = st.tabs(["My Accounts", "Add Account", "Edit Account"])
     with tab_view:
         _render_view()
     with tab_add:
         _render_add()
+    with tab_edit:
+        _render_edit()
 
 
 def _render_view():
@@ -61,3 +63,39 @@ def _render_add():
                 create_account(name=name, account_type=account_type, institution=institution or None, balance=balance, credit_limit=credit_limit if credit_limit else None)
                 st.success(f"Added '{name}'!")
                 st.rerun()
+
+
+def _render_edit():
+    accounts = get_all_accounts(active_only=False)
+    if not accounts:
+        st.info("No accounts to edit.")
+        return
+
+    account_options = {f"{acc.name} ({acc.institution or acc.account_type})": acc for acc in accounts}
+    selected_label = st.selectbox("Select Account", list(account_options.keys()), key="edit_acc_sel")
+    acc = account_options[selected_label]
+
+    types = ["bank", "credit_card", "wallet", "investment"]
+
+    with st.form("edit_account"):
+        new_name = st.text_input("Account Name", value=acc.name)
+        new_type = st.selectbox("Type", types, index=types.index(acc.account_type) if acc.account_type in types else 0, format_func=lambda x: x.replace("_", " ").title())
+        new_institution = st.text_input("Institution", value=acc.institution or "")
+        new_balance = st.number_input("Balance ($)", value=acc.balance, step=100.0)
+        new_currency = st.selectbox("Currency", ["USD", "EUR", "GBP"], index=["USD", "EUR", "GBP"].index(acc.currency) if acc.currency in ["USD", "EUR", "GBP"] else 0)
+        new_credit_limit = st.number_input("Credit Limit ($)", value=acc.credit_limit or 0.0, step=1000.0)
+        new_active = st.checkbox("Active", value=acc.is_active)
+
+        if st.form_submit_button("Save Changes", type="primary", use_container_width=True):
+            update_account(
+                acc.id,
+                name=new_name,
+                account_type=new_type,
+                institution=new_institution or None,
+                balance=new_balance,
+                currency=new_currency,
+                credit_limit=new_credit_limit if new_credit_limit > 0 else None,
+                is_active=new_active,
+            )
+            st.success(f"Updated '{new_name}'!")
+            st.rerun()
