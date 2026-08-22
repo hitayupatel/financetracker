@@ -224,6 +224,39 @@ Reply with ONLY the number and category, one per line. Example:
     return results
 
 
+def get_category_suggestions(description: str, top_n: int = 3) -> list:
+    """Get top N category suggestions for a transaction description."""
+    if not description:
+        return []
+
+    desc_lower = description.lower()
+    scores = {}
+
+    for category_name, keywords in CATEGORY_KEYWORDS.items():
+        category_score = 0
+        for keyword in keywords:
+            if keyword in desc_lower:
+                category_score += len(keyword)
+        if category_score > 0:
+            scores[category_name] = category_score
+
+    sorted_categories = sorted(scores.items(), key=lambda x: x[1], reverse=True)[:top_n]
+
+    session = get_session()
+    suggestions = []
+    for cat_name, score in sorted_categories:
+        category = session.query(Category).filter(Category.name == cat_name).first()
+        if category:
+            suggestions.append({
+                "id": category.id,
+                "name": category.name,
+                "icon": category.icon,
+                "type": category.category_type,
+            })
+    session.close()
+    return suggestions
+
+
 def get_all_categories(category_type: Optional[str] = None) -> list:
     session = get_session()
     query = session.query(Category)
