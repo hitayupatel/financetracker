@@ -141,7 +141,7 @@ def import_csv(
                 txn_type = "expense"
             elif credit_amt and credit_amt > 0:
                 amount = credit_amt
-                txn_type = "income"
+                txn_type = "payment"
 
         if amount is None or amount == 0:
             skipped += 1
