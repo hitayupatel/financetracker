@@ -7,7 +7,7 @@ import io
 import pandas as pd
 
 from src.config import load_config
-from src.database import get_session, Transaction, Account
+from src.database import get_session, Transaction, Account, is_duplicate_transaction
 from src.categorizer import categorize_transaction
 
 
@@ -148,6 +148,12 @@ def import_csv(
             continue
 
         description = str(row.get(desc_col, "")).strip() if desc_col else ""
+
+        # Skip duplicates
+        if is_duplicate_transaction(session, account_id, parsed_date, amount, description):
+            skipped += 1
+            continue
+
         category_id = categorize_transaction(description)
 
         txn = Transaction(

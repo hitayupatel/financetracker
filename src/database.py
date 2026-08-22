@@ -113,6 +113,34 @@ def get_session():
     return _SessionLocal()
 
 
+from contextlib import contextmanager
+
+@contextmanager
+def managed_session():
+    """Context manager for safe session handling. Use: with managed_session() as session:"""
+    session = get_session()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def is_duplicate_transaction(session, account_id: int, txn_date, amount: float, description: str) -> bool:
+    """Check if a transaction with same date, amount, and description already exists."""
+    query = session.query(Transaction).filter(
+        Transaction.account_id == account_id,
+        Transaction.date == txn_date,
+        Transaction.amount == amount,
+    )
+    if description:
+        query = query.filter(Transaction.description == description)
+    return query.first() is not None
+
+
 def init_db():
     engine = get_engine()
     Base.metadata.create_all(engine)

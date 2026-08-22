@@ -11,7 +11,7 @@ from typing import Optional
 import pdfplumber
 
 from src.config import load_config
-from src.database import get_session, Transaction, Account
+from src.database import get_session, Transaction, Account, is_duplicate_transaction
 from src.categorizer import categorize_transaction
 
 
@@ -361,6 +361,11 @@ def import_pdf(file_content: bytes, account_id: int, institution: Optional[str] 
 
     for txn in transactions:
         try:
+            # Skip duplicates
+            if is_duplicate_transaction(session, account_id, txn["date"], txn["amount"], txn["description"]):
+                skipped += 1
+                continue
+
             category_id = categorize_transaction(txn["description"])
             db_txn = Transaction(
                 date=txn["date"],
