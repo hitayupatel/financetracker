@@ -19,9 +19,10 @@ st.set_page_config(
 # Sidebar navigation
 st.sidebar.title("🏛️ Finance Minister")
 
-page = st.sidebar.radio(
+page = st.sidebar.selectbox(
     "Go to",
     ["Overview", "Transactions", "Accounts", "Import", "Analytics", "Ask AI"],
+    label_visibility="collapsed",
 )
 
 if page == "Overview":
