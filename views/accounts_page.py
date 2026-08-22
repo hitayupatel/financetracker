@@ -6,13 +6,11 @@ from src.accounts import create_account, get_all_accounts, update_account, deact
 
 def render():
     st.title("🏦 Accounts")
-    tab_view, tab_add, tab_edit = st.tabs(["My Accounts", "Add Account", "Edit Account"])
+    tab_view, tab_add = st.tabs(["My Accounts", "Add Account"])
     with tab_view:
         _render_view()
     with tab_add:
         _render_add()
-    with tab_edit:
-        _render_edit()
 
 
 def _render_view():
@@ -29,14 +27,56 @@ def _render_view():
         return
 
     for acc in accounts:
-        col1, col2, col3 = st.columns([3, 2, 1])
+        col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
         status = "🟢" if acc.is_active else "🔴"
         col1.write(f"{status} **{acc.name}** — {acc.institution or acc.account_type.replace('_', ' ').title()}")
         col2.write(f"${acc.balance:,.2f}")
+        if col3.button("✏️", key=f"edit_{acc.id}"):
+            st.session_state[f"editing_account"] = acc.id
         if acc.is_active:
-            if col3.button("🗑️", key=f"deact_{acc.id}"):
+            if col4.button("🗑️", key=f"deact_{acc.id}"):
                 deactivate_account(acc.id)
                 st.rerun()
+
+    # Inline edit form
+    editing_id = st.session_state.get("editing_account")
+    if editing_id:
+        acc = next((a for a in accounts if a.id == editing_id), None)
+        if acc:
+            st.divider()
+            st.subheader(f"Editing: {acc.name}")
+            types = ["bank", "credit_card", "wallet", "investment"]
+
+            with st.form("edit_account_form"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    new_name = st.text_input("Name", value=acc.name)
+                    new_type = st.selectbox("Type", types, index=types.index(acc.account_type) if acc.account_type in types else 0, format_func=lambda x: x.replace("_", " ").title())
+                    new_institution = st.text_input("Institution", value=acc.institution or "")
+                with col2:
+                    new_balance = st.number_input("Balance ($)", value=acc.balance, step=100.0)
+                    new_credit_limit = st.number_input("Credit Limit ($)", value=acc.credit_limit or 0.0, step=1000.0)
+                    new_active = st.checkbox("Active", value=acc.is_active)
+
+                col_save, col_cancel = st.columns(2)
+                with col_save:
+                    if st.form_submit_button("Save", type="primary", use_container_width=True):
+                        update_account(
+                            acc.id,
+                            name=new_name,
+                            account_type=new_type,
+                            institution=new_institution or None,
+                            balance=new_balance,
+                            credit_limit=new_credit_limit if new_credit_limit > 0 else None,
+                            is_active=new_active,
+                        )
+                        del st.session_state["editing_account"]
+                        st.success(f"Updated '{new_name}'!")
+                        st.rerun()
+                with col_cancel:
+                    if st.form_submit_button("Cancel", use_container_width=True):
+                        del st.session_state["editing_account"]
+                        st.rerun()
 
     st.divider()
     if st.button("🔄 Recalculate All Balances"):
@@ -63,39 +103,3 @@ def _render_add():
                 create_account(name=name, account_type=account_type, institution=institution or None, balance=balance, credit_limit=credit_limit if credit_limit else None)
                 st.success(f"Added '{name}'!")
                 st.rerun()
-
-
-def _render_edit():
-    accounts = get_all_accounts(active_only=False)
-    if not accounts:
-        st.info("No accounts to edit.")
-        return
-
-    account_options = {f"{acc.name} ({acc.institution or acc.account_type})": acc for acc in accounts}
-    selected_label = st.selectbox("Select Account", list(account_options.keys()), key="edit_acc_sel")
-    acc = account_options[selected_label]
-
-    types = ["bank", "credit_card", "wallet", "investment"]
-
-    with st.form("edit_account"):
-        new_name = st.text_input("Account Name", value=acc.name)
-        new_type = st.selectbox("Type", types, index=types.index(acc.account_type) if acc.account_type in types else 0, format_func=lambda x: x.replace("_", " ").title())
-        new_institution = st.text_input("Institution", value=acc.institution or "")
-        new_balance = st.number_input("Balance ($)", value=acc.balance, step=100.0)
-        new_currency = st.selectbox("Currency", ["USD", "EUR", "GBP"], index=["USD", "EUR", "GBP"].index(acc.currency) if acc.currency in ["USD", "EUR", "GBP"] else 0)
-        new_credit_limit = st.number_input("Credit Limit ($)", value=acc.credit_limit or 0.0, step=1000.0)
-        new_active = st.checkbox("Active", value=acc.is_active)
-
-        if st.form_submit_button("Save Changes", type="primary", use_container_width=True):
-            update_account(
-                acc.id,
-                name=new_name,
-                account_type=new_type,
-                institution=new_institution or None,
-                balance=new_balance,
-                currency=new_currency,
-                credit_limit=new_credit_limit if new_credit_limit > 0 else None,
-                is_active=new_active,
-            )
-            st.success(f"Updated '{new_name}'!")
-            st.rerun()
