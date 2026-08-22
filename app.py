@@ -19,11 +19,24 @@ st.set_page_config(
 # Sidebar navigation
 st.sidebar.title("🏛️ Finance Minister")
 
-page = st.sidebar.selectbox(
-    "Go to",
-    ["Overview", "Transactions", "Accounts", "Import", "Analytics", "Ask AI"],
-    label_visibility="collapsed",
-)
+# Sidebar navigation with styled buttons
+nav_items = {
+    "Overview": "🏠",
+    "Transactions": "📋",
+    "Accounts": "🏦",
+    "Import": "📥",
+    "Analytics": "📊",
+    "Ask AI": "🤖",
+}
+
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Overview"
+
+for label, icon in nav_items.items():
+    if st.sidebar.button(f"{icon}  {label}", use_container_width=True, key=f"nav_{label}"):
+        st.session_state.current_page = label
+
+page = st.session_state.current_page
 
 if page == "Overview":
     from views.overview import render
