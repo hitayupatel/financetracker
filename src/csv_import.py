@@ -61,6 +61,45 @@ def _parse_amount(value):
         return None
 
 
+# Mapping from bank-provided category names to our internal category names
+CSV_CATEGORY_MAP = {
+    # Capital One categories
+    "dining": "Dining",
+    "merchandise": "Shopping",
+    "gas/automotive": "Transport",
+    "entertainment": "Entertainment",
+    "phone/cable": "Utilities",
+    "other services": "Personal Care",
+    "other travel": "Transport",
+    "airfare": "Travel",
+    "insurance": "Insurance",
+    "health care": "Healthcare",
+    "internet": "Utilities",
+    "utilities": "Utilities",
+    "fee/interest charge": "Other Expense",
+    "payment/credit": None,  # Skip — handled by income/expense logic
+    # Chase categories (Type column)
+    "ach_credit": None,
+    "ach_debit": None,
+    "quickpay_credit": None,
+    "quickpay_debit": None,
+}
+
+
+def _map_csv_category(csv_category: str) -> "Optional[int]":
+    """Map a bank-provided category name to our internal category_id."""
+    from src.database import get_session, Category
+
+    mapped_name = CSV_CATEGORY_MAP.get(csv_category.lower())
+    if mapped_name is None:
+        return None
+
+    session = get_session()
+    category = session.query(Category).filter(Category.name == mapped_name).first()
+    session.close()
+    return category.id if category else None
+
+
 def preview_csv(file_content: bytes, encoding: str = "utf-8") -> dict:
     try:
         df = pd.read_csv(io.BytesIO(file_content), encoding=encoding, nrows=100, index_col=False)
@@ -185,7 +224,13 @@ def import_csv(
             skipped += 1
             continue
 
-        category_id = categorize_transaction(description)
+        # Categorize: use CSV's own category column first, then fall back to keywords/LLM
+        category_id = None
+        csv_category = str(row.get("category", "")).strip() if "category" in df.columns else ""
+        if csv_category and csv_category.lower() != "nan":
+            category_id = _map_csv_category(csv_category)
+        if category_id is None:
+            category_id = categorize_transaction(description)
 
         txn = Transaction(
             date=parsed_date,

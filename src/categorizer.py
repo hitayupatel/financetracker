@@ -46,8 +46,8 @@ CATEGORY_KEYWORDS = {
         "lowes", "ikea", "etsy", "ebay",
     ],
     "Subscriptions": [
-        "subscription", "membership", "premium", "annual",
-        "monthly", "recurring", "apple.com/bill", "google storage",
+        "subscription", "membership", "annual plan",
+        "monthly plan", "recurring", "apple.com/bill", "google storage",
     ],
     "Education": [
         "course", "udemy", "coursera", "book", "tuition", "school",
