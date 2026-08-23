@@ -146,14 +146,20 @@ def import_csv(
         elif debit_col or credit_col:
             debit_amt = _parse_amount(row.get(debit_col)) if debit_col else None
             credit_amt = _parse_amount(row.get(credit_col)) if credit_col else None
-            if debit_amt and debit_amt > 0:
+            if debit_amt is not None and debit_amt > 0:
                 amount = debit_amt
                 txn_type = "expense"
-            elif credit_amt and credit_amt > 0:
+            elif credit_amt is not None and credit_amt > 0:
                 amount = credit_amt
                 txn_type = "payment"
+            elif debit_amt is not None:
+                amount = abs(debit_amt)
+                txn_type = "expense"
+            elif credit_amt is not None:
+                amount = abs(credit_amt)
+                txn_type = "payment"
 
-        if amount is None or amount == 0:
+        if amount is None:
             skipped += 1
             continue
 
