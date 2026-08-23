@@ -47,11 +47,25 @@ def _csv_import(account_options, selected_account):
         if preview["rows"]:
             st.dataframe(pd.DataFrame(preview["rows"]), use_container_width=True, hide_index=True)
 
-        default_type = st.radio("Default type", ["expense", "income"], horizontal=True, key="csv_dt")
+        # If single amount column (no separate debit/credit), ask user how to interpret
+        amount_sign_rule = None
+        if detected["has_amount"] and not detected["has_debit_credit"]:
+            amount_sign_rule = st.radio(
+                "How should the Amount column be interpreted?",
+                ["Negative = Expense, Positive = Income", "Positive = Expense, Negative = Income", "All values are Expenses", "All values are Income"],
+                key="csv_sign_rule",
+            )
+
+        default_type = st.radio("Default type (for ambiguous rows)", ["expense", "income"], horizontal=True, key="csv_dt")
 
         if st.button("Import CSV", type="primary", use_container_width=True, key="csv_btn"):
             with st.spinner("Importing..."):
-                result = import_csv(file_content=content, account_id=account_options[selected_account], default_type=default_type)
+                result = import_csv(
+                    file_content=content,
+                    account_id=account_options[selected_account],
+                    default_type=default_type,
+                    amount_sign_rule=amount_sign_rule,
+                )
             if result["success"]:
                 st.success(f"Imported {result['imported']} transactions ({result['skipped']} skipped)")
             else:

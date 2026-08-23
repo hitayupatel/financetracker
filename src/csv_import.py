@@ -97,6 +97,7 @@ def import_csv(
     amount_column: Optional[str] = None,
     debit_column: Optional[str] = None,
     credit_column: Optional[str] = None,
+    amount_sign_rule: Optional[str] = None,
 ) -> dict:
     try:
         df = pd.read_csv(io.BytesIO(file_content), encoding=encoding)
@@ -138,11 +139,25 @@ def import_csv(
         if amount_col and amount_col in df.columns:
             amount = _parse_amount(row.get(amount_col))
             if amount is not None:
-                if amount < 0:
+                if amount_sign_rule == "All values are Expenses":
                     txn_type = "expense"
                     amount = abs(amount)
-                else:
+                elif amount_sign_rule == "All values are Income":
                     txn_type = "income"
+                    amount = abs(amount)
+                elif amount_sign_rule == "Positive = Expense, Negative = Income":
+                    if amount >= 0:
+                        txn_type = "expense"
+                    else:
+                        txn_type = "income"
+                    amount = abs(amount)
+                else:
+                    # Default: Negative = Expense, Positive = Income
+                    if amount < 0:
+                        txn_type = "expense"
+                    else:
+                        txn_type = "income"
+                    amount = abs(amount)
         elif debit_col or credit_col:
             debit_amt = _parse_amount(row.get(debit_col)) if debit_col else None
             credit_amt = _parse_amount(row.get(credit_col)) if credit_col else None
