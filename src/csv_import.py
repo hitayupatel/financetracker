@@ -63,10 +63,10 @@ def _parse_amount(value):
 
 def preview_csv(file_content: bytes, encoding: str = "utf-8") -> dict:
     try:
-        df = pd.read_csv(io.BytesIO(file_content), encoding=encoding, nrows=100)
+        df = pd.read_csv(io.BytesIO(file_content), encoding=encoding, nrows=100, index_col=False)
     except UnicodeDecodeError:
         try:
-            df = pd.read_csv(io.BytesIO(file_content), encoding="latin-1", nrows=100)
+            df = pd.read_csv(io.BytesIO(file_content), encoding="latin-1", nrows=100, index_col=False)
         except Exception as e:
             return {"error": f"Could not read CSV: {str(e)}"}
     except Exception as e:
@@ -100,10 +100,10 @@ def import_csv(
     amount_sign_rule: Optional[str] = None,
 ) -> dict:
     try:
-        df = pd.read_csv(io.BytesIO(file_content), encoding=encoding)
+        df = pd.read_csv(io.BytesIO(file_content), encoding=encoding, index_col=False)
     except UnicodeDecodeError:
         try:
-            df = pd.read_csv(io.BytesIO(file_content), encoding="latin-1")
+            df = pd.read_csv(io.BytesIO(file_content), encoding="latin-1", index_col=False)
         except Exception as e:
             return {"success": False, "error": f"Could not read CSV: {str(e)}"}
     except Exception as e:
