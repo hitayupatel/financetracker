@@ -92,14 +92,18 @@ def _render_add():
         account_type = st.selectbox("Type", ["bank", "credit_card", "wallet", "investment"], format_func=lambda x: x.replace("_", " ").title())
         institution = st.text_input("Institution", placeholder="e.g., Chase, Capital One")
         balance = st.number_input("Opening Balance ($)", value=0.0, step=100.0)
-        credit_limit = None
-        if account_type == "credit_card":
-            credit_limit = st.number_input("Credit Limit ($)", value=0.0, step=1000.0)
+        credit_limit = st.number_input("Credit Limit ($ - for credit cards)", value=0.0, step=1000.0)
 
         if st.form_submit_button("Add Account", type="primary", use_container_width=True):
             if not name:
                 st.error("Name required.")
             else:
-                create_account(name=name, account_type=account_type, institution=institution or None, balance=balance, credit_limit=credit_limit if credit_limit else None)
+                create_account(
+                    name=name,
+                    account_type=account_type,
+                    institution=institution or None,
+                    balance=balance,
+                    credit_limit=credit_limit if credit_limit > 0 else None,
+                )
                 st.success(f"Added '{name}'!")
                 st.rerun()
