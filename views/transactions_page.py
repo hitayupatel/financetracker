@@ -146,3 +146,40 @@ def _render_transaction_list():
             if delete_transaction(txn_id_del):
                 st.success(f"Deleted #{txn_id_del}")
                 st.rerun()
+
+    # Re-evaluate categories
+    with st.expander("🔄 Re-evaluate categories"):
+        st.caption("Re-run LLM categorization on uncategorized or all transactions.")
+        reeval_scope = st.radio("Scope", ["Only uncategorized", "All transactions (overwrite)"], key="reeval_scope", horizontal=True)
+        if st.button("Re-evaluate", type="primary", key="reeval_btn"):
+            from src.categorizer import categorize_batch_llm, categorize_transaction as _cat_txn
+            from src.database import get_session as _gs, Transaction as _Txn
+
+            session = _gs()
+            if reeval_scope == "Only uncategorized":
+                targets = [t for t in transactions if t.category_id is None and t.description]
+            else:
+                targets = [t for t in transactions if t.description]
+
+            if not targets:
+                st.info("No transactions to re-evaluate.")
+            else:
+                with st.spinner(f"Re-evaluating {len(targets)} transactions..."):
+                    descriptions = [t.description for t in targets]
+                    results = categorize_batch_llm(descriptions)
+
+                    updated = 0
+                    for txn in targets:
+                        new_cat = results.get(txn.description)
+                        if new_cat is None:
+                            new_cat = _cat_txn(txn.description)
+                        if new_cat:
+                            db_txn = session.query(_Txn).filter(_Txn.id == txn.id).first()
+                            if db_txn:
+                                db_txn.category_id = new_cat
+                                updated += 1
+
+                    session.commit()
+                    session.close()
+                    st.success(f"Updated {updated} out of {len(targets)} transactions.")
+                    st.rerun()
