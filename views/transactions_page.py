@@ -152,8 +152,10 @@ def _render_transaction_list():
         st.caption("Re-run LLM categorization on uncategorized or all transactions.")
         reeval_scope = st.radio("Scope", ["Only uncategorized", "All transactions (overwrite)"], key="reeval_scope", horizontal=True)
         if st.button("Re-evaluate", type="primary", key="reeval_btn"):
-            from src.categorizer import categorize_batch_llm, categorize_transaction as _cat_txn
-            from src.database import get_session as _gs, Transaction as _Txn
+            from src.categorizer import categorize_transaction as _cat_txn
+            from src.database import get_session as _gs, Transaction as _Txn, Category as _Cat
+            from src.config import get_llm_config
+            import requests
 
             session = _gs()
             if reeval_scope == "Only uncategorized":
@@ -164,22 +166,66 @@ def _render_transaction_list():
             if not targets:
                 st.info("No transactions to re-evaluate.")
             else:
-                with st.spinner(f"Re-evaluating {len(targets)} transactions..."):
-                    descriptions = [t.description for t in targets]
-                    results = categorize_batch_llm(descriptions)
+                # Get category info for LLM prompt
+                all_cats = session.query(_Cat).all()
+                cat_names = [c.name for c in all_cats]
+                cat_map = {c.name.lower(): c.id for c in all_cats}
 
-                    updated = 0
-                    for txn in targets:
-                        new_cat = results.get(txn.description)
-                        if new_cat is None:
-                            new_cat = _cat_txn(txn.description)
-                        if new_cat:
-                            db_txn = session.query(_Txn).filter(_Txn.id == txn.id).first()
-                            if db_txn:
-                                db_txn.category_id = new_cat
-                                updated += 1
+                config = get_llm_config()
+                base_url = config["base_url"]
+                model = config["model"]
 
-                    session.commit()
-                    session.close()
-                    st.success(f"Updated {updated} out of {len(targets)} transactions.")
-                    st.rerun()
+                batch_size = 15
+                total = len(targets)
+                updated = 0
+                progress_bar = st.progress(0, text=f"0 / {total} done")
+
+                for i in range(0, total, batch_size):
+                    batch = targets[i:i + batch_size]
+                    descriptions = [t.description for t in batch]
+                    numbered = "\n".join(f"{j+1}. {d}" for j, d in enumerate(descriptions))
+
+                    prompt = f"""Categorize each transaction into one of these categories:
+{', '.join(cat_names)}
+
+Transactions:
+{numbered}
+
+Reply with ONLY the number and category, one per line. Example:
+1. Dining
+2. Groceries"""
+
+                    try:
+                        response = requests.post(
+                            f"{base_url}/api/generate",
+                            json={"model": model, "prompt": prompt, "stream": False, "options": {"temperature": 0.1, "num_predict": 200}},
+                            timeout=30,
+                        )
+                        if response.status_code == 200:
+                            answer = response.json().get("response", "")
+                            for line in answer.strip().split("\n"):
+                                line = line.strip()
+                                if not line:
+                                    continue
+                                parts = line.split(".", 1) if "." in line else line.split(":", 1)
+                                if len(parts) == 2:
+                                    try:
+                                        idx = int(parts[0].strip()) - 1
+                                        cat_name = parts[1].strip().lower().rstrip(".")
+                                        if 0 <= idx < len(batch) and cat_name in cat_map:
+                                            db_txn = session.query(_Txn).filter(_Txn.id == batch[idx].id).first()
+                                            if db_txn:
+                                                db_txn.category_id = cat_map[cat_name]
+                                                updated += 1
+                                    except (ValueError, IndexError):
+                                        continue
+                    except Exception:
+                        pass
+
+                    done = min(i + batch_size, total)
+                    progress_bar.progress(done / total, text=f"{done} / {total} done — {updated} categorized")
+
+                session.commit()
+                session.close()
+                st.success(f"Done! Updated {updated} out of {total} transactions.")
+                st.rerun()
