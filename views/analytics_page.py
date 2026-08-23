@@ -15,10 +15,10 @@ def render():
 
     today = date.today()
     months = []
-    for i in range(6):
+    for i in range(24):
         m = today.month - i
         y = today.year
-        if m <= 0:
+        while m <= 0:
             m += 12
             y -= 1
         months.append(date(y, m, 1))

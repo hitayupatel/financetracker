@@ -14,13 +14,13 @@ from src.transactions import get_category_breakdown, get_daily_spending, get_spe
 def render():
     st.title("🏛️ Finance Minister")
 
-    # Simple month picker
+    # Month picker - shows last 24 months
     today = date.today()
     months = []
-    for i in range(6):
+    for i in range(24):
         m = today.month - i
         y = today.year
-        if m <= 0:
+        while m <= 0:
             m += 12
             y -= 1
         months.append(date(y, m, 1))
