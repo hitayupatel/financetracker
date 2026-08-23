@@ -54,11 +54,48 @@ def render():
     st.subheader("Where your money went")
     categories = get_category_breakdown(year, month, "expense")
     if categories:
+        # Get transaction details per category for hover
+        from src.database import get_session, Category as CatModel, Transaction as TxnModel
+        from sqlalchemy import extract
+        session = get_session()
+
+        hover_texts = []
+        for cat in categories:
+            cat_obj = session.query(CatModel).filter(CatModel.name == cat["category"]).first()
+            if cat_obj:
+                txns = (
+                    session.query(TxnModel)
+                    .filter(
+                        TxnModel.category_id == cat_obj.id,
+                        extract("year", TxnModel.date) == year,
+                        extract("month", TxnModel.date) == month,
+                        TxnModel.transaction_type == "expense",
+                    )
+                    .order_by(TxnModel.amount.desc())
+                    .limit(5)
+                    .all()
+                )
+                lines = [f"<b>{cat['category']}</b> — ${cat['total']:,.0f} ({cat['count']} txns)"]
+                lines.append("")
+                for t in txns:
+                    lines.append(f"${t.amount:,.2f} — {(t.description or '-')[:35]}")
+                if cat["count"] > 5:
+                    lines.append(f"...and {cat['count'] - 5} more")
+                hover_texts.append("<br>".join(lines))
+            else:
+                hover_texts.append(f"{cat['category']}: ${cat['total']:,.0f}")
+        session.close()
+
         df = pd.DataFrame(categories)
         fig = px.bar(
             df, y="category", x="total", orientation="h",
             text=df["total"].apply(lambda x: f"${x:,.0f}"),
             color_discrete_sequence=["#6366f1"],
+        )
+        fig.update_traces(
+            textposition="outside",
+            hovertemplate="%{customdata}<extra></extra>",
+            customdata=hover_texts,
         )
         fig.update_layout(
             yaxis=dict(categoryorder="total ascending", title=""),
@@ -67,7 +104,6 @@ def render():
             height=max(250, len(df) * 35),
             showlegend=False,
         )
-        fig.update_traces(textposition="outside")
         st.plotly_chart(fig, use_container_width=True)
 
         # Drill-down: select a category to see transactions
