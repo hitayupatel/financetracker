@@ -69,6 +69,32 @@ def render():
         )
         fig.update_traces(textposition="outside")
         st.plotly_chart(fig, use_container_width=True)
+
+        # Drill-down: select a category to see transactions
+        cat_names = [c["category"] for c in categories]
+        selected_cat = st.selectbox("🔍 View transactions for category", ["-- Select --"] + cat_names, key="cat_drill")
+        if selected_cat != "-- Select --":
+            from src.database import get_session, Category, Transaction
+            session = get_session()
+            cat = session.query(Category).filter(Category.name == selected_cat).first()
+            if cat:
+                from sqlalchemy import extract
+                txns = (
+                    session.query(Transaction)
+                    .filter(
+                        Transaction.category_id == cat.id,
+                        extract("year", Transaction.date) == year,
+                        extract("month", Transaction.date) == month,
+                        Transaction.transaction_type == "expense",
+                    )
+                    .order_by(Transaction.date.desc())
+                    .all()
+                )
+                if txns:
+                    rows = [{"Date": t.date, "Amount": f"${t.amount:,.2f}", "Description": t.description or "-"} for t in txns]
+                    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+                    st.caption(f"{len(txns)} transactions | Total: ${sum(t.amount for t in txns):,.2f}")
+            session.close()
     else:
         st.info("No expenses this month.")
 
