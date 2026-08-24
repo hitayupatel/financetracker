@@ -100,6 +100,43 @@ def _map_csv_category(csv_category: str) -> "Optional[int]":
     return category.id if category else None
 
 
+TRANSFER_KEYWORDS = [
+    "capital one mobile pmt", "capital one autopay",
+    "payment to chase card",
+]
+
+INVESTMENT_KEYWORDS = [
+    "robinhood", "fidelity", "schwab", "webull", "vanguard",
+    "e*trade", "td ameritrade",
+]
+
+SAVINGS_KEYWORDS = [
+    "goldman sachs ba transfer", "goldman sachs",
+    "marcus", "ally bank",
+]
+
+
+def _detect_transaction_type(description: str, current_type: str) -> str:
+    """Override transaction type based on known patterns."""
+    if not description:
+        return current_type
+    desc_lower = description.lower()
+
+    for kw in TRANSFER_KEYWORDS:
+        if kw in desc_lower:
+            return "transfer"
+
+    for kw in INVESTMENT_KEYWORDS:
+        if kw in desc_lower:
+            return "investment"
+
+    for kw in SAVINGS_KEYWORDS:
+        if kw in desc_lower:
+            return "savings"
+
+    return current_type
+
+
 def preview_csv(file_content: bytes, encoding: str = "utf-8") -> dict:
     try:
         df = pd.read_csv(io.BytesIO(file_content), encoding=encoding, nrows=100, index_col=False)
@@ -223,6 +260,9 @@ def import_csv(
             continue
 
         description = str(row.get(desc_col, "")).strip() if desc_col else ""
+
+        # Auto-detect transaction type from description
+        txn_type = _detect_transaction_type(description, txn_type)
 
         # Skip duplicates
         if is_duplicate_transaction(session, account_id, parsed_date, amount, description):
