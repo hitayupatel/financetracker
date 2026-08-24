@@ -14,7 +14,8 @@ export default function Overview() {
   const [daily, setDaily] = useState<any[]>([])
   const [drillCategory, setDrillCategory] = useState<string | null>(null)
   const [drillTransactions, setDrillTransactions] = useState<any[]>([])
-
+  const [drillType, setDrillType] = useState<string | null>(null)
+  const [drillTypeTransactions, setDrillTypeTransactions] = useState<any[]>([])
   const [year, mon] = month.split('-').map(Number)
 
   useEffect(() => {
@@ -23,7 +24,24 @@ export default function Overview() {
     api.get(`/analytics/daily-spending?year=${year}&month=${mon}`).then(r => setDaily(r.data))
     setDrillCategory(null)
     setDrillTransactions([])
+    setDrillType(null)
+    setDrillTypeTransactions([])
   }, [month])
+
+  const handleTypeDrill = async (type: string) => {
+    if (drillType === type) {
+      setDrillType(null)
+      setDrillTypeTransactions([])
+      return
+    }
+    setDrillType(type)
+    setDrillCategory(null)
+    setDrillTransactions([])
+    const startDate = `${year}-${String(mon).padStart(2, '0')}-01`
+    const endDate = mon === 12 ? `${year + 1}-01-01` : `${year}-${String(mon + 1).padStart(2, '0')}-01`
+    const res = await api.get(`/transactions?start_date=${startDate}&end_date=${endDate}&transaction_type=${type}&limit=500`)
+    setDrillTypeTransactions(res.data)
+  }
 
   const handleCategoryClick = async (category: string) => {
     if (drillCategory === category) {
@@ -64,11 +82,44 @@ export default function Overview() {
       {/* Metrics */}
       {overview && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-          <MetricCard label="Income" value={overview.income} color="text-green-400" />
-          <MetricCard label="Expenses" value={overview.expense} color="text-red-400" />
-          <MetricCard label="Refunds" value={overview.refund} color="text-emerald-400" />
+          <MetricCard label="Income" value={overview.income} color="text-green-400" onClick={() => handleTypeDrill('income')} active={drillType === 'income'} />
+          <MetricCard label="Expenses" value={overview.expense} color="text-red-400" onClick={() => handleTypeDrill('expense')} active={drillType === 'expense'} />
+          <MetricCard label="Refunds" value={overview.refund} color="text-emerald-400" onClick={() => handleTypeDrill('refund')} active={drillType === 'refund'} />
           <MetricCard label="Net" value={overview.net} color="text-indigo-400" />
           <MetricCard label="Savings Rate" value={`${overview.savings_rate.toFixed(0)}%`} color="text-yellow-400" raw />
+        </div>
+      )}
+
+      {/* Type drill-down (income/refund/expense) */}
+      {drillType && drillTypeTransactions.length > 0 && (
+        <div className="bg-gray-900 border border-green-800 rounded-xl p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white capitalize">{drillType} — {drillTypeTransactions.length} transactions</h2>
+            <button onClick={() => { setDrillType(null); setDrillTypeTransactions([]) }} className="text-gray-400 hover:text-white text-sm">✕ Close</button>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-800">
+                <tr>
+                  <th className="text-left px-3 py-2 text-gray-400">Date</th>
+                  <th className="text-left px-3 py-2 text-gray-400">Description</th>
+                  <th className="text-right px-3 py-2 text-gray-400">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {drillTypeTransactions.map((t: any) => (
+                  <tr key={t.id} className="border-t border-gray-800">
+                    <td className="px-3 py-2 text-gray-300">{t.date}</td>
+                    <td className="px-3 py-2 text-gray-100">{t.description || '—'}</td>
+                    <td className="px-3 py-2 text-right font-mono text-gray-100">${t.amount.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Total: ${drillTypeTransactions.reduce((s: number, t: any) => s + t.amount, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          </p>
         </div>
       )}
 
@@ -168,12 +219,16 @@ export default function Overview() {
   )
 }
 
-function MetricCard({ label, value, color, raw }: { label: string; value: any; color: string; raw?: boolean }) {
+function MetricCard({ label, value, color, raw, onClick, active }: { label: string; value: any; color: string; raw?: boolean; onClick?: () => void; active?: boolean }) {
   const display = raw ? value : `$${Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 })}`
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+    <div
+      className={`bg-gray-900 border rounded-xl p-4 ${active ? 'border-indigo-500' : 'border-gray-800'} ${onClick ? 'cursor-pointer hover:border-gray-600' : ''}`}
+      onClick={onClick}
+    >
       <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
       <p className={`text-xl font-bold mt-1 ${color}`}>{display}</p>
+      {onClick && <p className="text-xs text-gray-600 mt-1">Click to view</p>}
     </div>
   )
 }
