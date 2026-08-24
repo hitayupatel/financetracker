@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import api from '../api/client'
+import TransactionList from '../components/TransactionList'
 
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#ef4444', '#84cc16']
 
@@ -92,35 +93,11 @@ export default function Overview() {
 
       {/* Type drill-down (income/refund/expense) */}
       {drillType && drillTypeTransactions.length > 0 && (
-        <div className="bg-gray-900 border border-green-800 rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white capitalize">{drillType} — {drillTypeTransactions.length} transactions</h2>
-            <button onClick={() => { setDrillType(null); setDrillTypeTransactions([]) }} className="text-gray-400 hover:text-white text-sm">✕ Close</button>
-          </div>
-          <div className="max-h-64 overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-800">
-                <tr>
-                  <th className="text-left px-3 py-2 text-gray-400">Date</th>
-                  <th className="text-left px-3 py-2 text-gray-400">Description</th>
-                  <th className="text-right px-3 py-2 text-gray-400">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {drillTypeTransactions.map((t: any) => (
-                  <tr key={t.id} className="border-t border-gray-800">
-                    <td className="px-3 py-2 text-gray-300">{t.date}</td>
-                    <td className="px-3 py-2 text-gray-100">{t.description || '—'}</td>
-                    <td className="px-3 py-2 text-right font-mono text-gray-100">${t.amount.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Total: ${drillTypeTransactions.reduce((s: number, t: any) => s + t.amount, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
+        <TransactionList
+          transactions={drillTypeTransactions}
+          title={drillType.charAt(0).toUpperCase() + drillType.slice(1)}
+          onClose={() => { setDrillType(null); setDrillTypeTransactions([]) }}
+        />
       )}
 
       {/* Charts */}
@@ -173,47 +150,12 @@ export default function Overview() {
 
       {/* Category drill-down */}
       {drillCategory && (
-        <div className="bg-gray-900 border border-indigo-800 rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">{drillCategory} — {drillTransactions.length} transactions</h2>
-            <button onClick={() => { setDrillCategory(null); setDrillTransactions([]) }} className="text-gray-400 hover:text-white text-sm">✕ Close</button>
-          </div>
-          <div className="max-h-64 overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-800">
-                <tr>
-                  <th className="text-left px-3 py-2 text-gray-400">Date</th>
-                  <th className="text-left px-3 py-2 text-gray-400">Description</th>
-                  <th className="text-left px-3 py-2 text-gray-400">Type</th>
-                  <th className="text-right px-3 py-2 text-gray-400">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {drillTransactions.map(t => (
-                  <tr key={t.id} className="border-t border-gray-800">
-                    <td className="px-3 py-2 text-gray-300">{t.date}</td>
-                    <td className="px-3 py-2 text-gray-100">{t.description || '—'}</td>
-                    <td className="px-3 py-2">
-                      {t.isRefund ? (
-                        <span className="text-xs bg-green-900/50 text-green-400 px-2 py-0.5 rounded">Refund</span>
-                      ) : (
-                        <span className="text-xs bg-red-900/50 text-red-400 px-2 py-0.5 rounded">Expense</span>
-                      )}
-                    </td>
-                    <td className={`px-3 py-2 text-right font-mono ${t.isRefund ? 'text-green-400' : 'text-gray-100'}`}>
-                      {t.isRefund ? '+' : ''}${t.amount.toFixed(2)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex justify-between mt-3 text-xs text-gray-500">
-            <span>Expenses: ${drillTransactions.filter((t: any) => !t.isRefund).reduce((s: number, t: any) => s + t.amount, 0).toFixed(2)}</span>
-            <span className="text-green-400">Refunds: ${drillTransactions.filter((t: any) => t.isRefund).reduce((s: number, t: any) => s + t.amount, 0).toFixed(2)}</span>
-            <span className="text-white font-medium">Net: ${(drillTransactions.filter((t: any) => !t.isRefund).reduce((s: number, t: any) => s + t.amount, 0) - drillTransactions.filter((t: any) => t.isRefund).reduce((s: number, t: any) => s + t.amount, 0)).toFixed(2)}</span>
-          </div>
-        </div>
+        <TransactionList
+          transactions={drillTransactions}
+          title={drillCategory}
+          onClose={() => { setDrillCategory(null); setDrillTransactions([]) }}
+          showType
+        />
       )}
     </div>
   )
