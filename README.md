@@ -1,65 +1,59 @@
 # Finance Minister
 
-A local personal finance tracker that categorizes spending, tracks accounts, and uses a local LLM for financial insights.
+Local personal finance tracker with FastAPI backend and React frontend.
 
-## Features
+## Architecture
 
-- **Multi-account tracking** — bank, credit card, wallet, investment accounts
-- **CSV import** — supports Chase, Capital One, Discover, and generic formats
-- **PDF import** — parses statements from Chase, Discover, Capital One, Marcus, Robinhood, Fidelity, Webull
-- **Smart categorization** — uses bank's own categories first, then local LLM (Ollama) for the rest
-- **Duplicate detection** — re-importing the same statement won't create duplicates
-- **Transaction editing** — edit/delete any transaction, re-evaluate categories via LLM
-- **Analytics** — category breakdown, daily spending, monthly trends
-- **AI chat** — ask questions about your finances using a local LLM
-- **100% local** — all data stays on your machine, no cloud APIs
-
-## Tech Stack
-
-- **Backend**: Python, SQLAlchemy, SQLite
-- **Frontend**: Streamlit (migrating to FastAPI + React)
-- **LLM**: Ollama (llama3.1)
-- **Charts**: Plotly
+```
+backend/       FastAPI + Python (API, database, LLM, import logic)
+frontend/      React + TypeScript + TailwindCSS + Recharts
+```
 
 ## Setup
 
+### Backend
 ```bash
-# Install dependencies
+cd backend
 pip install -r requirements.txt
-
-# Install and start Ollama
-brew install ollama
-ollama serve
-ollama pull llama3.1
-
-# Run the app
-streamlit run app.py
+uvicorn main:app --reload --port 8000
 ```
 
-Open http://localhost:8501
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## Usage
+Open http://localhost:5173
 
-1. **Add accounts** — Go to Accounts > Add Account (Chase Checking, Capital One credit card, etc.)
-2. **Import statements** — Go to Import > upload CSV or PDF from your bank
-3. **View overview** — Select a month to see spending breakdown, daily chart, category drill-down
-4. **Ask AI** — Chat with your local LLM about your finances
-5. **Re-evaluate categories** — Transactions > Re-evaluate categories to re-run LLM categorization
+### LLM (optional, for AI chat + categorization)
+```bash
+ollama serve
+ollama pull llama3.1
+```
 
-## Supported CSV Formats
+## Features
 
-- **Capital One** — Transaction Date, Debit, Credit, Category columns
-- **Chase** — Posting Date, Description, Amount, Type columns (handles trailing commas)
-- **Generic** — any CSV with date + amount or debit/credit columns
+- Multi-account tracking (bank, credit card, wallet, investment)
+- CSV/PDF import (Chase, Capital One, Discover, Marcus, Robinhood, Fidelity, Webull)
+- Smart categorization (bank categories → LLM fallback)
+- Background re-categorization with WebSocket progress
+- Analytics with interactive charts
+- AI chat powered by local LLM
+- Duplicate detection on import
+- Transaction editing
+- All data stays local (SQLite + Ollama)
 
-## Data
+## API Endpoints
 
-- Database: `data/finance.db` (SQLite, gitignored)
-- All transactions tagged with source: `manual`, `csv_import`, `pdf_import`, `demo`
-
-## Roadmap
-
-- [ ] Migrate to FastAPI + React for better UI (background jobs, real-time progress, SPA navigation)
-- [ ] Plaid integration for live bank connections
-- [ ] Budget tracking and alerts
-- [ ] Recurring transaction detection
+- `GET /api/health` — health check
+- `GET /api/accounts` — list accounts
+- `POST /api/accounts` — create account
+- `GET /api/transactions` — list transactions
+- `POST /api/import/csv` — import CSV
+- `POST /api/import/pdf` — import PDF
+- `GET /api/analytics/overview` — monthly overview
+- `POST /api/chat` — send message to AI
+- `POST /api/jobs/recategorize` — start background re-categorization
+- `WS /api/jobs/ws/progress` — WebSocket for job progress
