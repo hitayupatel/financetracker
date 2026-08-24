@@ -130,14 +130,18 @@ def managed_session():
 
 
 def is_duplicate_transaction(session, account_id: int, txn_date, amount: float, description: str) -> bool:
-    """Check if a transaction with same date, amount, and description already exists."""
+    """Check if a transaction with same date and amount already exists on this account."""
     query = session.query(Transaction).filter(
         Transaction.account_id == account_id,
         Transaction.date == txn_date,
         Transaction.amount == amount,
     )
+    # If description provided, check for exact match OR existing entry with no description
     if description:
-        query = query.filter(Transaction.description == description)
+        from sqlalchemy import or_
+        query = query.filter(
+            or_(Transaction.description == description, Transaction.description == None)
+        )
     return query.first() is not None
 
 
