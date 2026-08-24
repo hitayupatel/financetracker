@@ -32,14 +32,20 @@ export default function Overview() {
       return
     }
     setDrillCategory(category)
-    // Fetch transactions for this category in this month
     const allCats = await api.get('/transactions/categories')
     const cat = allCats.data.find((c: any) => c.name === category)
     if (cat) {
       const startDate = `${year}-${String(mon).padStart(2, '0')}-01`
       const endDate = mon === 12 ? `${year + 1}-01-01` : `${year}-${String(mon + 1).padStart(2, '0')}-01`
-      const res = await api.get(`/transactions?category_id=${cat.id}&start_date=${startDate}&end_date=${endDate}&transaction_type=expense`)
-      setDrillTransactions(res.data)
+      // Fetch both expenses and refunds for this category
+      const [expRes, refRes] = await Promise.all([
+        api.get(`/transactions?category_id=${cat.id}&start_date=${startDate}&end_date=${endDate}&transaction_type=expense`),
+        api.get(`/transactions?category_id=${cat.id}&start_date=${startDate}&end_date=${endDate}&transaction_type=refund`),
+      ])
+      // Mark refunds so we can style them differently
+      const expenses = expRes.data.map((t: any) => ({ ...t, isRefund: false }))
+      const refunds = refRes.data.map((t: any) => ({ ...t, isRefund: true }))
+      setDrillTransactions([...expenses, ...refunds].sort((a, b) => a.date.localeCompare(b.date)))
     }
   }
 
@@ -127,6 +133,7 @@ export default function Overview() {
                 <tr>
                   <th className="text-left px-3 py-2 text-gray-400">Date</th>
                   <th className="text-left px-3 py-2 text-gray-400">Description</th>
+                  <th className="text-left px-3 py-2 text-gray-400">Type</th>
                   <th className="text-right px-3 py-2 text-gray-400">Amount</th>
                 </tr>
               </thead>
@@ -135,15 +142,26 @@ export default function Overview() {
                   <tr key={t.id} className="border-t border-gray-800">
                     <td className="px-3 py-2 text-gray-300">{t.date}</td>
                     <td className="px-3 py-2 text-gray-100">{t.description || '—'}</td>
-                    <td className="px-3 py-2 text-right font-mono text-gray-100">${t.amount.toFixed(2)}</td>
+                    <td className="px-3 py-2">
+                      {t.isRefund ? (
+                        <span className="text-xs bg-green-900/50 text-green-400 px-2 py-0.5 rounded">Refund</span>
+                      ) : (
+                        <span className="text-xs bg-red-900/50 text-red-400 px-2 py-0.5 rounded">Expense</span>
+                      )}
+                    </td>
+                    <td className={`px-3 py-2 text-right font-mono ${t.isRefund ? 'text-green-400' : 'text-gray-100'}`}>
+                      {t.isRefund ? '+' : ''}${t.amount.toFixed(2)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            Total: ${drillTransactions.reduce((s: number, t: any) => s + t.amount, 0).toFixed(2)}
-          </p>
+          <div className="flex justify-between mt-3 text-xs text-gray-500">
+            <span>Expenses: ${drillTransactions.filter((t: any) => !t.isRefund).reduce((s: number, t: any) => s + t.amount, 0).toFixed(2)}</span>
+            <span className="text-green-400">Refunds: ${drillTransactions.filter((t: any) => t.isRefund).reduce((s: number, t: any) => s + t.amount, 0).toFixed(2)}</span>
+            <span className="text-white font-medium">Net: ${(drillTransactions.filter((t: any) => !t.isRefund).reduce((s: number, t: any) => s + t.amount, 0) - drillTransactions.filter((t: any) => t.isRefund).reduce((s: number, t: any) => s + t.amount, 0)).toFixed(2)}</span>
+          </div>
         </div>
       )}
     </div>
