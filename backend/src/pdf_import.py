@@ -384,14 +384,24 @@ def import_pdf(file_content: bytes, account_id: int, institution: Optional[str] 
 
     if imported > 0:
         session.commit()
-        _llm_categorize_uncategorized(session, account_id)
         session.close()
         from src.accounts import recalculate_balance
         recalculate_balance(account_id)
+
+        import threading
+        threading.Thread(target=_llm_categorize_background, args=(account_id,), daemon=True).start()
     else:
         session.close()
 
     return {"success": True, "imported": imported, "skipped": skipped, "errors": errors[:10], "total_parsed": len(transactions), "institution": detected.replace("_", " ").title()}
+
+
+def _llm_categorize_background(account_id: int):
+    """Run LLM categorization in a background thread."""
+    from src.database import get_session, Transaction
+    session = get_session()
+    _llm_categorize_uncategorized(session, account_id)
+    session.close()
 
 
 def _llm_categorize_uncategorized(session, account_id: int):

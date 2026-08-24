@@ -251,10 +251,13 @@ def import_csv(
 
     if imported > 0:
         session.commit()
-        _llm_categorize_uncategorized(session, account_id)
         from src.accounts import recalculate_balance
         session.close()
         recalculate_balance(account_id)
+
+        # Run LLM categorization in background (don't block import response)
+        import threading
+        threading.Thread(target=_llm_categorize_background, args=(account_id,), daemon=True).start()
     else:
         session.close()
 
@@ -265,6 +268,14 @@ def import_csv(
         "errors": errors[:10],
         "total_rows": len(df),
     }
+
+
+def _llm_categorize_background(account_id: int):
+    """Run LLM categorization in a background thread."""
+    from src.database import get_session, Transaction
+    session = get_session()
+    _llm_categorize_uncategorized(session, account_id)
+    session.close()
 
 
 def _llm_categorize_uncategorized(session, account_id: int):
