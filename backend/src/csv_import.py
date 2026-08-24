@@ -205,7 +205,12 @@ def import_csv(
                 txn_type = "expense"
             elif credit_amt is not None and credit_amt > 0:
                 amount = credit_amt
-                txn_type = "income"
+                # Check if it's a payment (from CSV category) or a refund
+                csv_category = str(row.get("category", "")).strip().lower() if "category" in df.columns else ""
+                if "payment" in csv_category:
+                    txn_type = "payment"
+                else:
+                    txn_type = "refund"
             elif debit_amt is not None:
                 amount = abs(debit_amt)
                 txn_type = "expense"

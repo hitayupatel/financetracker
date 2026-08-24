@@ -11,7 +11,7 @@ def get_overview(year: int, month: int) -> dict:
     session = get_session()
 
     totals = {}
-    for txn_type in ["income", "expense", "savings", "investment", "payment"]:
+    for txn_type in ["income", "expense", "savings", "investment", "payment", "refund"]:
         total = (
             session.query(func.coalesce(func.sum(Transaction.amount), 0.0))
             .filter(
@@ -49,7 +49,8 @@ def get_overview(year: int, month: int) -> dict:
         "savings": totals["savings"],
         "investment": totals["investment"],
         "payment": totals["payment"],
-        "net": totals["income"] + totals["payment"] - totals["expense"],
+        "refund": totals["refund"],
+        "net": totals["income"] + totals["payment"] + totals["refund"] - totals["expense"],
         "transaction_count": txn_count,
         "avg_daily_expense": avg_daily_expense,
         "savings_rate": savings_rate,

@@ -100,6 +100,7 @@ export default function Transactions() {
           <option value="expense">Expense</option>
           <option value="income">Income</option>
           <option value="payment">Payment</option>
+                        <option value="refund">Refund</option>
           <option value="investment">Investment</option>
           <option value="savings">Savings</option>
         </select>
@@ -172,6 +173,7 @@ export default function Transactions() {
                         <option value="expense">Expense</option>
                         <option value="income">Income</option>
                         <option value="payment">Payment</option>
+                        <option value="refund">Refund</option>
                         <option value="investment">Investment</option>
                         <option value="savings">Savings</option>
                       </select>

@@ -60,7 +60,7 @@ export default function Overview() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <MetricCard label="Income" value={overview.income} color="text-green-400" />
           <MetricCard label="Expenses" value={overview.expense} color="text-red-400" />
-          <MetricCard label="Payments" value={overview.payment} color="text-blue-400" />
+          <MetricCard label="Refunds" value={overview.refund} color="text-emerald-400" />
           <MetricCard label="Net" value={overview.net} color="text-indigo-400" />
           <MetricCard label="Savings Rate" value={`${overview.savings_rate.toFixed(0)}%`} color="text-yellow-400" raw />
         </div>

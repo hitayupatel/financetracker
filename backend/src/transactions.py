@@ -135,14 +135,16 @@ def get_monthly_summary(year: int, month: int) -> dict:
         )
         results[txn_type] = float(total)
 
-    results["net"] = results["income"] + results["payment"] - results["expense"] - results["savings"] - results["investment"]
+    results["net"] = results["income"] + results["payment"] + results["refund"] - results["expense"] - results["savings"] - results["investment"]
     session.close()
     return results
 
 
 def get_category_breakdown(year: int, month: int, transaction_type: str = "expense") -> list:
     session = get_session()
-    results = (
+
+    # Get expenses
+    expense_results = (
         session.query(
             Category.name,
             Category.icon,
@@ -156,14 +158,44 @@ def get_category_breakdown(year: int, month: int, transaction_type: str = "expen
             Transaction.transaction_type == transaction_type,
         )
         .group_by(Category.name, Category.icon)
-        .order_by(func.sum(Transaction.amount).desc())
         .all()
     )
+
+    # If looking at expenses, subtract refunds from same categories
+    refund_map = {}
+    if transaction_type == "expense":
+        refund_results = (
+            session.query(
+                Category.name,
+                func.sum(Transaction.amount).label("total"),
+            )
+            .join(Category, Transaction.category_id == Category.id)
+            .filter(
+                extract("year", Transaction.date) == year,
+                extract("month", Transaction.date) == month,
+                Transaction.transaction_type == "refund",
+            )
+            .group_by(Category.name)
+            .all()
+        )
+        refund_map = {r.name: float(r.total) for r in refund_results}
+
     session.close()
-    return [
-        {"category": r.name, "icon": r.icon, "total": float(r.total), "count": r.count}
-        for r in results
-    ]
+
+    breakdown = []
+    for r in expense_results:
+        net_total = float(r.total) - refund_map.get(r.name, 0)
+        breakdown.append({
+            "category": r.name,
+            "icon": r.icon,
+            "total": net_total,
+            "count": r.count,
+            "refunded": refund_map.get(r.name, 0),
+        })
+
+    # Sort by total descending
+    breakdown.sort(key=lambda x: x["total"], reverse=True)
+    return breakdown
 
 
 def get_daily_spending(year: int, month: int) -> list:

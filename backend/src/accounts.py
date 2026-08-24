@@ -112,7 +112,7 @@ def recalculate_balance(account_id: int) -> float:
         session.query(func.coalesce(func.sum(Transaction.amount), 0.0))
         .filter(
             Transaction.account_id == account_id,
-            Transaction.transaction_type.in_(["income", "payment"]),
+            Transaction.transaction_type.in_(["income", "payment", "refund"]),
         )
         .scalar()
     )
