@@ -120,7 +120,7 @@ def preview_csv(file_content: bytes, encoding: str = "utf-8") -> dict:
     }
     return {
         "columns": list(df.columns),
-        "rows": df.head(5).to_dict(orient="records"),
+        "rows": df.head(5).fillna("").to_dict(orient="records"),
         "row_count": len(df),
         "detected_format": detected,
     }
