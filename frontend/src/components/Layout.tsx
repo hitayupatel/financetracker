@@ -1,5 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { Home, List, Building2, Upload, BarChart3, MessageCircle } from 'lucide-react'
+import CategorizationProgress from './CategorizationProgress'
 
 const navItems = [
   { to: '/', icon: Home, label: 'Overview' },
@@ -44,6 +45,9 @@ export default function Layout() {
       <main className="flex-1 overflow-y-auto p-8">
         <Outlet />
       </main>
+
+      {/* Background job progress */}
+      <CategorizationProgress />
     </div>
   )
 }

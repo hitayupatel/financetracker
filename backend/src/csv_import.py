@@ -271,11 +271,92 @@ def import_csv(
 
 
 def _llm_categorize_background(account_id: int):
-    """Run LLM categorization in a background thread."""
+    """Run LLM categorization in a background thread with progress tracking."""
     from src.database import get_session, Transaction
+    from src.categorizer import categorize_batch_llm
+    from src.config import get_llm_config
+    from src.job_tracker import reset_status, update_progress, mark_done
+    import requests
+
     session = get_session()
-    _llm_categorize_uncategorized(session, account_id)
+    uncategorized = (
+        session.query(Transaction)
+        .filter(
+            Transaction.account_id == account_id,
+            Transaction.category_id == None,
+            Transaction.description != None,
+        )
+        .all()
+    )
+
+    if not uncategorized:
+        session.close()
+        return
+
+    descriptions = [t.description for t in uncategorized if t.description]
+    if not descriptions:
+        session.close()
+        return
+
+    reset_status("import", len(descriptions))
+
+    config = get_llm_config()
+    from src.database import Category
+    all_cats = session.query(Category).all()
+    cat_names = [c.name for c in all_cats]
+    cat_map = {c.name.lower(): c.id for c in all_cats}
+
+    batch_size = 15
+    updated = 0
+
+    for i in range(0, len(descriptions), batch_size):
+        batch = descriptions[i:i + batch_size]
+        numbered = "\n".join(f"{j+1}. {d}" for j, d in enumerate(batch))
+
+        prompt = f"""Categorize each transaction into one of these categories:
+{', '.join(cat_names)}
+
+Transactions:
+{numbered}
+
+Reply with ONLY the number and category, one per line. Example:
+1. Dining
+2. Groceries"""
+
+        try:
+            response = requests.post(
+                f"{config['base_url']}/api/generate",
+                json={"model": config["model"], "prompt": prompt, "stream": False, "options": {"temperature": 0.1, "num_predict": 200}},
+                timeout=30,
+            )
+            if response.status_code == 200:
+                answer = response.json().get("response", "")
+                for line in answer.strip().split("\n"):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    parts = line.split(".", 1) if "." in line else line.split(":", 1)
+                    if len(parts) == 2:
+                        try:
+                            idx = int(parts[0].strip()) - 1
+                            cat_name = parts[1].strip().lower().rstrip(".")
+                            if 0 <= idx < len(batch) and cat_name in cat_map:
+                                # Find the transaction with this description
+                                for txn in uncategorized:
+                                    if txn.description == batch[idx] and txn.category_id is None:
+                                        txn.category_id = cat_map[cat_name]
+                                        updated += 1
+                                        break
+                        except (ValueError, IndexError):
+                            continue
+        except Exception:
+            pass
+
+        update_progress(min(i + batch_size, len(descriptions)), updated)
+
+    session.commit()
     session.close()
+    mark_done()
 
 
 def _llm_categorize_uncategorized(session, account_id: int):

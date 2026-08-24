@@ -1,4 +1,4 @@
-"""Background jobs API with WebSocket progress."""
+"""Background jobs API with progress tracking."""
 
 import asyncio
 import threading
@@ -7,25 +7,18 @@ from typing import Optional
 
 from src.database import get_session, Transaction, Category
 from src.config import get_llm_config
+from src.job_tracker import categorization_status, reset_status, update_progress, mark_done
 
 router = APIRouter()
-
-# Job state
-_job_status = {"running": False, "progress": 0, "total": 0, "updated": 0, "done": False}
-_ws_clients = []
 
 
 def _run_recategorize(scope: str, account_id: Optional[int] = None):
     """Background thread for re-categorization."""
     import requests
 
-    global _job_status
-    _job_status = {"running": True, "progress": 0, "total": 0, "updated": 0, "done": False}
-
     session = get_session()
     config = get_llm_config()
 
-    # Get targets
     query = session.query(Transaction).filter(Transaction.description != None)
     if account_id:
         query = query.filter(Transaction.account_id == account_id)
@@ -33,15 +26,14 @@ def _run_recategorize(scope: str, account_id: Optional[int] = None):
         query = query.filter(Transaction.category_id == None)
 
     targets = query.all()
-    _job_status["total"] = len(targets)
 
     if not targets:
-        _job_status["done"] = True
-        _job_status["running"] = False
+        mark_done()
         session.close()
         return
 
-    # Get categories
+    reset_status("reevaluate", len(targets))
+
     all_cats = session.query(Category).all()
     cat_names = [c.name for c in all_cats]
     cat_map = {c.name.lower(): c.id for c in all_cats}
@@ -89,18 +81,16 @@ Reply with ONLY the number and category, one per line. Example:
         except Exception:
             pass
 
-        _job_status["progress"] = min(i + batch_size, len(targets))
-        _job_status["updated"] = updated
+        update_progress(min(i + batch_size, len(targets)), updated)
 
     session.commit()
     session.close()
-    _job_status["done"] = True
-    _job_status["running"] = False
+    mark_done()
 
 
 @router.post("/recategorize")
 def start_recategorize(scope: str = "uncategorized", account_id: Optional[int] = None):
-    if _job_status.get("running"):
+    if categorization_status.get("running"):
         return {"error": "Job already running"}
 
     thread = threading.Thread(target=_run_recategorize, args=(scope, account_id), daemon=True)
@@ -110,21 +100,23 @@ def start_recategorize(scope: str = "uncategorized", account_id: Optional[int] =
 
 @router.get("/recategorize/status")
 def recategorize_status():
-    return _job_status
+    return categorization_status
+
+
+@router.get("/categorization/status")
+def categorization_progress():
+    """Get current categorization progress (from import or re-evaluate)."""
+    return categorization_status
 
 
 @router.websocket("/ws/progress")
 async def ws_progress(websocket: WebSocket):
     await websocket.accept()
-    _ws_clients.append(websocket)
     try:
         while True:
-            await websocket.send_json(_job_status)
-            if _job_status.get("done"):
+            await websocket.send_json(categorization_status)
+            if categorization_status.get("done"):
                 break
             await asyncio.sleep(1)
     except WebSocketDisconnect:
         pass
-    finally:
-        if websocket in _ws_clients:
-            _ws_clients.remove(websocket)
