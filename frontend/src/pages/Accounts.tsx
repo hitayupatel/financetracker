@@ -98,16 +98,31 @@ export default function Accounts() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
           <h2 className="text-lg font-semibold text-white mb-4">{editingId ? 'Edit Account' : 'Add Account'}</h2>
           <div className="grid grid-cols-2 gap-4">
-            <input placeholder="Account Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
-            <select value={form.account_type} onChange={e => setForm({ ...form, account_type: e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
-              <option value="bank">Bank</option>
-              <option value="credit_card">Credit Card</option>
-              <option value="wallet">Wallet</option>
-              <option value="investment">Investment</option>
-            </select>
-            <input placeholder="Institution" value={form.institution} onChange={e => setForm({ ...form, institution: e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
-            <input type="number" placeholder="Balance" value={form.balance} onChange={e => setForm({ ...form, balance: +e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
-            <input type="number" placeholder="Credit Limit" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: +e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Account Name</label>
+              <input placeholder="e.g., Chase Checking" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm w-full" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Account Type</label>
+              <select value={form.account_type} onChange={e => setForm({ ...form, account_type: e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm w-full">
+                <option value="bank">Bank</option>
+                <option value="credit_card">Credit Card</option>
+                <option value="wallet">Wallet</option>
+                <option value="investment">Investment</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Institution</label>
+              <input placeholder="e.g., Chase, Capital One" value={form.institution} onChange={e => setForm({ ...form, institution: e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm w-full" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Opening Balance ($)</label>
+              <input type="number" placeholder="0.00" value={form.balance} onChange={e => setForm({ ...form, balance: +e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm w-full" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 block mb-1">Credit Limit ($) — for credit cards</label>
+              <input type="number" placeholder="0.00" value={form.credit_limit} onChange={e => setForm({ ...form, credit_limit: +e.target.value })} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm w-full" />
+            </div>
           </div>
           <div className="flex gap-3 mt-4">
             <button onClick={editingId ? saveEdit : handleAdd} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium">
