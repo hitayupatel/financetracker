@@ -9,13 +9,14 @@ export default function Transactions() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editForm, setEditForm] = useState<any>({})
-  const [filter, setFilter] = useState({ type: '', account_id: '' })
+  const [filter, setFilter] = useState({ type: '', account_id: '', search: '' })
 
   const load = () => {
     setLoading(true)
     const params: any = { limit: 200 }
     if (filter.type) params.transaction_type = filter.type
     if (filter.account_id) params.account_id = filter.account_id
+    if (filter.search) params.search = filter.search
 
     Promise.all([
       api.get('/transactions', { params }),
@@ -91,6 +92,12 @@ export default function Transactions() {
 
       {/* Filters */}
       <div className="flex gap-4 mb-4">
+        <input
+          placeholder="Search descriptions..."
+          value={filter.search}
+          onChange={e => setFilter({ ...filter, search: e.target.value })}
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm flex-1"
+        />
         <select
           value={filter.type}
           onChange={e => setFilter({ ...filter, type: e.target.value })}

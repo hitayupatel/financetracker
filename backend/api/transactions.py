@@ -42,6 +42,7 @@ def list_transactions(
     transaction_type: Optional[str] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    search: Optional[str] = None,
     limit: int = 200,
     offset: int = 0,
 ):
@@ -49,6 +50,7 @@ def list_transactions(
         account_id=account_id, category_id=category_id,
         transaction_type=transaction_type,
         start_date=start_date, end_date=end_date,
+        search=search,
         limit=limit, offset=offset,
     )
     return [
