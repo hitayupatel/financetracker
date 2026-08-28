@@ -102,7 +102,8 @@ def _map_csv_category(csv_category: str) -> "Optional[int]":
 
 TRANSFER_KEYWORDS = [
     "capital one mobile pmt", "capital one autopay",
-    "payment to chase card",
+    "payment to chase card", "goldman sachs", "marcus", "ally bank",
+    "paypal", "transfer",
 ]
 
 INVESTMENT_KEYWORDS = [
@@ -110,29 +111,24 @@ INVESTMENT_KEYWORDS = [
     "e*trade", "td ameritrade",
 ]
 
-SAVINGS_KEYWORDS = [
-    "goldman sachs ba transfer", "goldman sachs",
-    "marcus", "ally bank",
-]
-
 
 def _detect_transaction_type(description: str, current_type: str) -> str:
-    """Override transaction type based on known patterns."""
+    """Override transaction type based on known patterns.
+
+    Transfers (money moving between your own accounts) are never income/expense.
+    Investments are Robinhood/brokerage moves.
+    """
     if not description:
         return current_type
     desc_lower = description.lower()
-
-    for kw in TRANSFER_KEYWORDS:
-        if kw in desc_lower:
-            return "transfer"
 
     for kw in INVESTMENT_KEYWORDS:
         if kw in desc_lower:
             return "investment"
 
-    for kw in SAVINGS_KEYWORDS:
+    for kw in TRANSFER_KEYWORDS:
         if kw in desc_lower:
-            return "savings"
+            return "transfer"
 
     return current_type
 
