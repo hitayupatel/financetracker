@@ -47,6 +47,12 @@ export default function Budget() {
     loadBudgetedMonths()
   }, [])
 
+  const dateRange = () => {
+    const startDate = `${year}-${String(mon).padStart(2, '0')}-01`
+    const endDate = mon === 12 ? `${year + 1}-01-01` : `${year}-${String(mon + 1).padStart(2, '0')}-01`
+    return { startDate, endDate }
+  }
+
   const handleCategoryClick = async (categoryName: string) => {
     if (drillCategory === categoryName) {
       setDrillCategory(null)
@@ -55,11 +61,36 @@ export default function Budget() {
     }
     const cat = categories.find((c: any) => c.name === categoryName)
     if (!cat) return
-    const startDate = `${year}-${String(mon).padStart(2, '0')}-01`
-    const endDate = mon === 12 ? `${year + 1}-01-01` : `${year}-${String(mon + 1).padStart(2, '0')}-01`
+    const { startDate, endDate } = dateRange()
     const res = await api.get(`/transactions?category_id=${cat.id}&start_date=${startDate}&end_date=${endDate}&limit=500`)
     setDrillCategory(categoryName)
     setDrillTransactions(res.data)
+  }
+
+  const handleBucketClick = async (bucketName: string) => {
+    const label = bucketName.charAt(0).toUpperCase() + bucketName.slice(1)
+    if (drillCategory === label) {
+      setDrillCategory(null)
+      setDrillTransactions([])
+      return
+    }
+    // Find all categories in this bucket (from the analysis category list)
+    const bucketCats = (analysis?.categories || []).filter((c: any) => c.bucket === bucketName)
+    const catIds = bucketCats
+      .map((bc: any) => categories.find((c: any) => c.name === bc.category)?.id)
+      .filter(Boolean)
+    if (catIds.length === 0) return
+
+    const { startDate, endDate } = dateRange()
+    // Fetch transactions for each category and merge
+    const results = await Promise.all(
+      catIds.map((id: number) =>
+        api.get(`/transactions?category_id=${id}&start_date=${startDate}&end_date=${endDate}&limit=500`)
+      )
+    )
+    const merged = results.flatMap(r => r.data).sort((a: any, b: any) => b.date.localeCompare(a.date))
+    setDrillCategory(label)
+    setDrillTransactions(merged)
   }
 
   const startSetup = async () => {
@@ -146,9 +177,9 @@ export default function Budget() {
       {!editing && analysis && (
         <>
           {hasBudget ? (
-            <BudgetAnalysis analysis={analysis} onCategoryClick={handleCategoryClick} activeDrill={drillCategory} />
+            <BudgetAnalysis analysis={analysis} onCategoryClick={handleCategoryClick} onBucketClick={handleBucketClick} activeDrill={drillCategory} />
           ) : (
-            <NoBudgetView analysis={analysis} onCategoryClick={handleCategoryClick} activeDrill={drillCategory} onSetup={startSetup} />
+            <NoBudgetView analysis={analysis} onCategoryClick={handleCategoryClick} onBucketClick={handleBucketClick} activeDrill={drillCategory} onSetup={startSetup} />
           )}
 
           {/* Category drill-down */}
@@ -167,7 +198,7 @@ export default function Budget() {
   )
 }
 
-function NoBudgetView({ analysis, onCategoryClick, activeDrill, onSetup }: any) {
+function NoBudgetView({ analysis, onCategoryClick, onBucketClick, activeDrill, onSetup }: any) {
   const { overall, buckets, categories } = analysis
 
   return (
@@ -186,17 +217,22 @@ function NoBudgetView({ analysis, onCategoryClick, activeDrill, onSetup }: any) 
         <p className="text-2xl font-bold text-white mt-1">${overall.spent.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
       </div>
 
-      {/* Bucket spending (no budget bars, just totals) */}
+      {/* Bucket spending (no budget bars, just totals) — clickable */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {buckets.map((b: any) => {
           const meta = BUCKET_META[b.bucket]
+          const active = activeDrill === b.bucket.charAt(0).toUpperCase() + b.bucket.slice(1)
           return (
-            <div key={b.bucket} className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <button
+              key={b.bucket}
+              onClick={() => onBucketClick(b.bucket)}
+              className={`text-left bg-gray-900 border rounded-xl p-5 transition-colors ${active ? 'border-indigo-600' : 'border-gray-800 hover:border-gray-600'}`}
+            >
               <p className={`font-semibold ${meta.color}`}>{meta.label}</p>
               <p className="text-xs text-gray-500 mb-3">{meta.desc}</p>
               <p className="text-xl font-bold text-white">${b.spent.toFixed(0)}</p>
-              <p className="text-xs text-gray-500">spent</p>
-            </div>
+              <p className="text-xs text-gray-500">spent · click to view</p>
+            </button>
           )
         })}
       </div>
@@ -222,7 +258,7 @@ function NoBudgetView({ analysis, onCategoryClick, activeDrill, onSetup }: any) 
   )
 }
 
-function BudgetAnalysis({ analysis, onCategoryClick, activeDrill }: any) {
+function BudgetAnalysis({ analysis, onCategoryClick, onBucketClick, activeDrill }: any) {
   const { overall, buckets, categories, alerts } = analysis
 
   return (
@@ -254,8 +290,13 @@ function BudgetAnalysis({ analysis, onCategoryClick, activeDrill }: any) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {buckets.map((b: any) => {
           const meta = BUCKET_META[b.bucket]
+          const active = activeDrill === b.bucket.charAt(0).toUpperCase() + b.bucket.slice(1)
           return (
-            <div key={b.bucket} className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <button
+              key={b.bucket}
+              onClick={() => onBucketClick(b.bucket)}
+              className={`text-left bg-gray-900 border rounded-xl p-5 transition-colors ${active ? 'border-indigo-600' : 'border-gray-800 hover:border-gray-600'}`}
+            >
               <p className={`font-semibold ${meta.color}`}>{meta.label}</p>
               <p className="text-xs text-gray-500 mb-3">{meta.desc}</p>
               <ProgressBar pct={b.pct} over={b.over} barColor={meta.bar} />
@@ -263,7 +304,7 @@ function BudgetAnalysis({ analysis, onCategoryClick, activeDrill }: any) {
                 <span className="text-gray-400">${b.spent.toFixed(0)} spent</span>
                 <span className="text-gray-500">${b.budget.toFixed(0)} budget</span>
               </div>
-            </div>
+            </button>
           )
         })}
       </div>
