@@ -29,6 +29,7 @@ CATEGORY_KEYWORDS = {
     ],
     "Rent/Mortgage": [
         "rent", "mortgage", "lease", "housing", "apartment", "zillow",
+        "plenty of places", "greystar", "avalon", "camden", "equity residential",
     ],
     "Healthcare": [
         "hospital", "doctor", "pharmacy", "medical", "health", "clinic",
