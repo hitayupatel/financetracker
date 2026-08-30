@@ -39,3 +39,31 @@ def top_expenses(year: int, month: int, limit: int = 10):
         {"id": t.id, "date": str(t.date), "amount": t.amount, "description": t.description}
         for t in txns
     ]
+
+
+@router.get("/available-months")
+def available_months():
+    """Return the list of months (YYYY-MM) that have transactions, newest first."""
+    from src.database import get_session, Transaction
+    from sqlalchemy import func
+
+    session = get_session()
+    earliest = session.query(func.min(Transaction.date)).scalar()
+    latest = session.query(func.max(Transaction.date)).scalar()
+    session.close()
+
+    if not earliest or not latest:
+        # No data — default to current month
+        from datetime import date
+        today = date.today()
+        return [f"{today.year}-{today.month:02d}"]
+
+    months = []
+    y, m = latest.year, latest.month
+    while (y > earliest.year) or (y == earliest.year and m >= earliest.month):
+        months.append(f"{y}-{m:02d}")
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    return months

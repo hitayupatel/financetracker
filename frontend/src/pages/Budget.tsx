@@ -60,12 +60,17 @@ export default function Budget() {
     loadAnalysis()
   }
 
-  const months = Array.from({ length: 12 }, (_, i) => {
-    const now = new Date()
-    // Use day=1 to avoid month-length rollover bugs (e.g. Aug 30 - 6 months skipping Feb)
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  })
+  const [months, setMonths] = useState<string[]>([])
+
+  useEffect(() => {
+    api.get('/analytics/available-months').then(r => {
+      setMonths(r.data)
+      // Default to the most recent month with data
+      if (r.data.length > 0 && !r.data.includes(month)) {
+        setMonth(r.data[0])
+      }
+    })
+  }, [])
 
   return (
     <div>
