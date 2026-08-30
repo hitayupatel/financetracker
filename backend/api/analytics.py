@@ -42,25 +42,43 @@ def top_expenses(year: int, month: int, limit: int = 10):
 
 
 @router.get("/available-months")
-def available_months():
-    """Return the list of months (YYYY-MM) that have transactions, newest first."""
+def available_months(future: int = 0):
+    """Return months (YYYY-MM) newest first.
+
+    Range: from the latest of (current month, most-recent transaction) plus
+    `future` upcoming months, back through the earliest transaction month.
+    Set future>0 for forward-looking pickers like budgets.
+    """
     from src.database import get_session, Transaction
     from sqlalchemy import func
+    from datetime import date
 
     session = get_session()
     earliest = session.query(func.min(Transaction.date)).scalar()
     latest = session.query(func.max(Transaction.date)).scalar()
     session.close()
 
-    if not earliest or not latest:
-        # No data — default to current month
-        from datetime import date
-        today = date.today()
-        return [f"{today.year}-{today.month:02d}"]
+    today = date.today()
+
+    # Start (oldest) = earliest transaction month, or current month if no data
+    if earliest:
+        start_y, start_m = earliest.year, earliest.month
+    else:
+        start_y, start_m = today.year, today.month
+
+    # End (newest) = max(current month, latest transaction month) + future months
+    end_y, end_m = today.year, today.month
+    if latest and (latest.year > end_y or (latest.year == end_y and latest.month > end_m)):
+        end_y, end_m = latest.year, latest.month
+    # Add future months
+    end_m += future
+    while end_m > 12:
+        end_m -= 12
+        end_y += 1
 
     months = []
-    y, m = latest.year, latest.month
-    while (y > earliest.year) or (y == earliest.year and m >= earliest.month):
+    y, m = end_y, end_m
+    while (y > start_y) or (y == start_y and m >= start_m):
         months.append(f"{y}-{m:02d}")
         m -= 1
         if m == 0:

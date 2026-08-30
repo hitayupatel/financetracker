@@ -63,12 +63,9 @@ export default function Budget() {
   const [months, setMonths] = useState<string[]>([])
 
   useEffect(() => {
-    api.get('/analytics/available-months').then(r => {
+    // future=3 lets you budget up to 3 months ahead
+    api.get('/analytics/available-months?future=3').then(r => {
       setMonths(r.data)
-      // Default to the most recent month with data
-      if (r.data.length > 0 && !r.data.includes(month)) {
-        setMonth(r.data[0])
-      }
     })
   }, [])
 
