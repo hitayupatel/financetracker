@@ -75,6 +75,16 @@ export default function Transactions() {
     api.get('/jobs/history').then(r => setHistory(r.data))
   }
 
+  const quickChangeCategory = async (txnId: number, categoryId: string) => {
+    await api.put(`/transactions/${txnId}`, {
+      category_id: categoryId === '' ? null : +categoryId,
+    })
+    // Update local state without full reload
+    setTransactions(prev => prev.map(t =>
+      t.id === txnId ? { ...t, category_id: categoryId === '' ? null : +categoryId } : t
+    ))
+  }
+
   const startReevaluate = async (scope: string) => {
     setRevalRunning(true)
     await api.post(`/jobs/recategorize?scope=${scope}`)
@@ -243,7 +253,18 @@ export default function Transactions() {
                   <tr key={txn.id} className="border-t border-gray-800 hover:bg-gray-800/50">
                     <td className="px-4 py-3 text-gray-300">{txn.date}</td>
                     <td className="px-4 py-3 text-gray-100">{txn.description || '—'}</td>
-                    <td className="px-4 py-3 text-gray-400">{getCategoryName(txn.category_id)}</td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={txn.category_id || ''}
+                        onChange={e => quickChangeCategory(txn.id, e.target.value)}
+                        className={`bg-transparent border border-gray-700 hover:border-indigo-500 rounded px-2 py-1 text-xs cursor-pointer ${txn.category_id ? 'text-gray-300' : 'text-amber-400'}`}
+                      >
+                        <option value="">— Uncategorized —</option>
+                        {categories.map(c => (
+                          <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                         txn.transaction_type === 'income' ? 'bg-green-900/50 text-green-400' :

@@ -79,7 +79,8 @@ def create(data: TransactionCreate):
 
 @router.put("/{txn_id}")
 def update(txn_id: int, data: TransactionUpdate):
-    updates = {k: v for k, v in data.dict().items() if v is not None}
+    # Only apply fields the client actually sent (allows setting category_id to null)
+    updates = data.dict(exclude_unset=True)
     txn = update_transaction(txn_id, **updates)
     if not txn:
         raise HTTPException(status_code=404, detail="Transaction not found")
