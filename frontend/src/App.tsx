@@ -5,6 +5,7 @@ import Transactions from './pages/Transactions'
 import Accounts from './pages/Accounts'
 import Import from './pages/Import'
 import Analytics from './pages/Analytics'
+import Budget from './pages/Budget'
 import Chat from './pages/Chat'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="accounts" element={<Accounts />} />
         <Route path="import" element={<Import />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="budget" element={<Budget />} />
         <Route path="chat" element={<Chat />} />
       </Route>
     </Routes>

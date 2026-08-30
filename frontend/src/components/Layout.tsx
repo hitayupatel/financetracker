@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { Home, List, Building2, Upload, BarChart3, MessageCircle } from 'lucide-react'
+import { Home, List, Building2, Upload, BarChart3, MessageCircle, PiggyBank } from 'lucide-react'
 import CategorizationProgress from './CategorizationProgress'
 
 const navItems = [
@@ -8,6 +8,7 @@ const navItems = [
   { to: '/accounts', icon: Building2, label: 'Accounts' },
   { to: '/import', icon: Upload, label: 'Import' },
   { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { to: '/budget', icon: PiggyBank, label: 'Budget' },
   { to: '/chat', icon: MessageCircle, label: 'Ask AI' },
 ]
 
