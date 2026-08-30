@@ -61,6 +61,8 @@ def get_monthly_spending_by_category(year: int, month: int) -> dict:
             extract("year", Transaction.date) == year,
             extract("month", Transaction.date) == month,
             Transaction.transaction_type.in_(["expense", "investment", "savings"]),
+            # Exclude income-type categories that may be wrongly assigned to expenses
+            Category.category_type != "income",
         )
         .group_by(Category.name, Category.icon)
         .all()
