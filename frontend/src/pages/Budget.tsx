@@ -1,6 +1,26 @@
 import { useEffect, useState } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import api from '../api/client'
 import TransactionList from '../components/TransactionList'
+
+function CollapsibleSection({ title, subtitle, defaultOpen = true, children }: { title: string; subtitle?: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-800/40 transition-colors"
+      >
+        <div className="text-left">
+          <h2 className="text-lg font-semibold text-white">{title}</h2>
+          {subtitle && <p className="text-xs text-gray-500">{subtitle}</p>}
+        </div>
+        {open ? <ChevronDown size={18} className="text-gray-400" /> : <ChevronRight size={18} className="text-gray-400" />}
+      </button>
+      {open && <div className="px-6 pb-6">{children}</div>}
+    </div>
+  )
+}
 
 const BUCKET_META: Record<string, { label: string; color: string; bar: string; desc: string }> = {
   needs: { label: 'Needs', color: 'text-blue-400', bar: 'bg-blue-500', desc: 'Rent, groceries, utilities, transport, insurance' },
@@ -237,10 +257,8 @@ function NoBudgetView({ analysis, onCategoryClick, onBucketClick, activeDrill, o
         })}
       </div>
 
-      {/* Category spending — clickable */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-1">Spending by Category</h2>
-        <p className="text-xs text-gray-500 mb-4">Click a category to see its transactions</p>
+      {/* Category spending — clickable, collapsible */}
+      <CollapsibleSection title="Spending by Category" subtitle="Click a category to see its transactions">
         <div className="space-y-2">
           {categories.filter((c: any) => c.spent > 0).map((c: any) => (
             <button
@@ -253,7 +271,7 @@ function NoBudgetView({ analysis, onCategoryClick, onBucketClick, activeDrill, o
             </button>
           ))}
         </div>
-      </div>
+      </CollapsibleSection>
     </div>
   )
 }
@@ -309,9 +327,7 @@ function BudgetAnalysis({ analysis, onCategoryClick, onBucketClick, activeDrill 
         })}
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-1">By Category</h2>
-        <p className="text-xs text-gray-500 mb-4">Click a category to see its transactions</p>
+      <CollapsibleSection title="By Category" subtitle="Click a category to see its transactions">
         <div className="space-y-4">
           {categories.filter((c: any) => c.budget > 0 || c.spent > 0).map((c: any) => (
             <button
@@ -329,7 +345,7 @@ function BudgetAnalysis({ analysis, onCategoryClick, onBucketClick, activeDrill 
             </button>
           ))}
         </div>
-      </div>
+      </CollapsibleSection>
     </div>
   )
 }
