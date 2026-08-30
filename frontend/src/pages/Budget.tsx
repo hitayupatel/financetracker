@@ -61,8 +61,9 @@ export default function Budget() {
   }
 
   const months = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date()
-    d.setMonth(d.getMonth() - i)
+    const now = new Date()
+    // Use day=1 to avoid month-length rollover bugs (e.g. Aug 30 - 6 months skipping Feb)
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
   })
 
