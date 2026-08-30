@@ -7,15 +7,19 @@ from src.database import get_session, Category
 
 CATEGORY_KEYWORDS = {
     "Groceries": [
-        "grocery", "supermarket", "whole foods", "trader joe", "costco",
-        "walmart", "target", "kroger", "safeway", "publix", "aldi",
-        "king soopers", "sprouts", "heb", "wegmans", "instacart",
+        "grocery", "supermarket", "whole foods", "wholefds", "trader joe",
+        "costco", "walmart", "wal-mart", "wm supercenter", "target", "kroger",
+        "safeway", "publix", "aldi", "king soopers", "sprouts", "heb",
+        "wegmans", "instacart", "taaza mart", "bombay bazaar", "apna bazar",
+        "india", "weee", "hillside market", "stop & shop", "wollaston",
+        "dollartree", "dollar tree",
     ],
     "Dining": [
-        "restaurant", "cafe", "doordash", "grubhub", "ubereats", "food",
+        "restaurant", "cafe", "coffee", "doordash", "grubhub", "ubereats",
         "pizza", "burger", "starbucks", "mcdonald", "domino", "chipotle",
         "chick-fil-a", "panera", "subway", "taco bell", "wendy",
         "dunkin", "panda express", "denny", "ihop", "applebee",
+        "ramen", "cava", "raising canes", "in-n-out", "five guys",
     ],
     "Transport": [
         "uber", "lyft", "fuel", "gas", "shell", "chevron", "exxon",
