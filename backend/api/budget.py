@@ -19,6 +19,16 @@ class BudgetSave(BaseModel):
     allocations: list[Allocation]
 
 
+@router.get("/months-with-budget")
+def months_with_budget():
+    """Return list of 'YYYY-MM' strings that have a budget configured."""
+    from src.database import get_session, Budget
+    session = get_session()
+    rows = session.query(Budget.year, Budget.month).distinct().all()
+    session.close()
+    return [f"{y}-{m:02d}" for (y, m) in rows]
+
+
 @router.get("/suggest")
 def suggest(months_back: int = 3):
     return suggest_budget(months_back)

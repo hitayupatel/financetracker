@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api/client'
+import TransactionList from '../components/TransactionList'
 
 const BUCKET_META: Record<string, { label: string; color: string; bar: string; desc: string }> = {
   needs: { label: 'Needs', color: 'text-blue-400', bar: 'bg-blue-500', desc: 'Rent, groceries, utilities, transport, insurance' },
@@ -17,11 +18,23 @@ export default function Budget() {
   const [editing, setEditing] = useState(false)
   const [allocations, setAllocations] = useState<Record<number, number>>({})
   const [categories, setCategories] = useState<any[]>([])
+  const [months, setMonths] = useState<string[]>([])
+  const [budgetedMonths, setBudgetedMonths] = useState<string[]>([])
+
+  // Category drill-down
+  const [drillCategory, setDrillCategory] = useState<string | null>(null)
+  const [drillTransactions, setDrillTransactions] = useState<any[]>([])
 
   const [year, mon] = month.split('-').map(Number)
 
   const loadAnalysis = () => {
     api.get(`/budget/${year}/${mon}/analysis`).then(r => setAnalysis(r.data))
+    setDrillCategory(null)
+    setDrillTransactions([])
+  }
+
+  const loadBudgetedMonths = () => {
+    api.get('/budget/months-with-budget').then(r => setBudgetedMonths(r.data))
   }
 
   useEffect(() => {
@@ -29,18 +42,36 @@ export default function Budget() {
     api.get('/transactions/categories').then(r => setCategories(r.data.filter((c: any) => ['expense', 'investment', 'savings'].includes(c.category_type))))
   }, [month])
 
+  useEffect(() => {
+    api.get('/analytics/available-months?future=3').then(r => setMonths(r.data))
+    loadBudgetedMonths()
+  }, [])
+
+  const handleCategoryClick = async (categoryName: string) => {
+    if (drillCategory === categoryName) {
+      setDrillCategory(null)
+      setDrillTransactions([])
+      return
+    }
+    const cat = categories.find((c: any) => c.name === categoryName)
+    if (!cat) return
+    const startDate = `${year}-${String(mon).padStart(2, '0')}-01`
+    const endDate = mon === 12 ? `${year + 1}-01-01` : `${year}-${String(mon + 1).padStart(2, '0')}-01`
+    const res = await api.get(`/transactions?category_id=${cat.id}&start_date=${startDate}&end_date=${endDate}&limit=500`)
+    setDrillCategory(categoryName)
+    setDrillTransactions(res.data)
+  }
+
   const startSetup = async () => {
     const [sugg, existing] = await Promise.all([
       api.get('/budget/suggest?months_back=3'),
       api.get(`/budget/${year}/${mon}`),
     ])
     setSuggestion(sugg.data)
-    // Prefill with existing budget or suggestions
     const alloc: Record<number, number> = {}
     if (existing.data.exists) {
       existing.data.categories.forEach((c: any) => { alloc[c.category_id] = c.amount })
     } else {
-      // map suggestions by category name -> id
       sugg.data.categories.forEach((s: any) => {
         const cat = categories.find((c: any) => c.name === s.category)
         if (cat) alloc[cat.id] = s.suggested
@@ -58,29 +89,45 @@ export default function Budget() {
     await api.post('/budget/', payload)
     setEditing(false)
     loadAnalysis()
+    loadBudgetedMonths()
   }
 
-  const [months, setMonths] = useState<string[]>([])
-
-  useEffect(() => {
-    // future=3 lets you budget up to 3 months ahead
-    api.get('/analytics/available-months?future=3').then(r => {
-      setMonths(r.data)
-    })
-  }, [])
+  const hasBudget = analysis?.has_budget
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Budget</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-white">Budget</h1>
+          {analysis && (
+            hasBudget ? (
+              <span className="text-xs bg-emerald-900/50 text-emerald-400 px-2 py-1 rounded-full">● Budget set</span>
+            ) : (
+              <span className="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded-full">○ No budget</span>
+            )
+          )}
+        </div>
         <div className="flex gap-3">
           <select value={month} onChange={e => setMonth(e.target.value)} className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
-            {months.map(m => <option key={m} value={m}>{new Date(m + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}</option>)}
+            {months.map(m => {
+              const budgeted = budgetedMonths.includes(m)
+              return (
+                <option key={m} value={m}>
+                  {budgeted ? '● ' : '○ '}{new Date(m + '-01').toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </option>
+              )
+            })}
           </select>
           <button onClick={startSetup} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm">
-            {analysis?.has_budget ? 'Edit Budget' : 'Set Up Budget'}
+            {hasBudget ? 'Edit Budget' : 'Set Up Budget'}
           </button>
         </div>
+      </div>
+
+      {/* Legend for indicators */}
+      <div className="flex gap-4 mb-4 text-xs text-gray-500">
+        <span>● = budget configured</span>
+        <span>○ = no budget (spending only)</span>
       </div>
 
       {/* Editing mode */}
@@ -95,31 +142,91 @@ export default function Budget() {
         />
       )}
 
-      {/* Analysis view */}
+      {/* Analysis / spending view */}
       {!editing && analysis && (
-        analysis.has_budget ? (
-          <BudgetAnalysis analysis={analysis} />
-        ) : (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-            <p className="text-4xl mb-4">💰</p>
-            <h2 className="text-lg font-semibold text-white mb-2">No budget set for this month</h2>
-            <p className="text-gray-400 text-sm mb-6">We'll suggest one based on your last 3 months of spending.</p>
-            <button onClick={startSetup} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm">
-              Set Up Budget
-            </button>
-          </div>
-        )
+        <>
+          {hasBudget ? (
+            <BudgetAnalysis analysis={analysis} onCategoryClick={handleCategoryClick} activeDrill={drillCategory} />
+          ) : (
+            <NoBudgetView analysis={analysis} onCategoryClick={handleCategoryClick} activeDrill={drillCategory} onSetup={startSetup} />
+          )}
+
+          {/* Category drill-down */}
+          {drillCategory && drillTransactions.length > 0 && (
+            <div className="mt-6">
+              <TransactionList
+                transactions={drillTransactions}
+                title={drillCategory}
+                onClose={() => { setDrillCategory(null); setDrillTransactions([]) }}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   )
 }
 
-function BudgetAnalysis({ analysis }: { analysis: any }) {
+function NoBudgetView({ analysis, onCategoryClick, activeDrill, onSetup }: any) {
+  const { overall, buckets, categories } = analysis
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-gray-900 border border-amber-800/40 rounded-xl p-5 flex items-center justify-between">
+        <div>
+          <p className="text-white font-medium">No budget set for this month</p>
+          <p className="text-gray-400 text-sm">Here's your actual spending. Set a budget to track against it.</p>
+        </div>
+        <button onClick={onSetup} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm whitespace-nowrap">Set Up Budget</button>
+      </div>
+
+      {/* Spending total */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <p className="text-xs text-gray-500 uppercase tracking-wide">Total Spending</p>
+        <p className="text-2xl font-bold text-white mt-1">${overall.spent.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+      </div>
+
+      {/* Bucket spending (no budget bars, just totals) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {buckets.map((b: any) => {
+          const meta = BUCKET_META[b.bucket]
+          return (
+            <div key={b.bucket} className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+              <p className={`font-semibold ${meta.color}`}>{meta.label}</p>
+              <p className="text-xs text-gray-500 mb-3">{meta.desc}</p>
+              <p className="text-xl font-bold text-white">${b.spent.toFixed(0)}</p>
+              <p className="text-xs text-gray-500">spent</p>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Category spending — clickable */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-white mb-1">Spending by Category</h2>
+        <p className="text-xs text-gray-500 mb-4">Click a category to see its transactions</p>
+        <div className="space-y-2">
+          {categories.filter((c: any) => c.spent > 0).map((c: any) => (
+            <button
+              key={c.category}
+              onClick={() => onCategoryClick(c.category)}
+              className={`w-full flex justify-between items-center text-sm px-3 py-2 rounded-lg transition-colors ${activeDrill === c.category ? 'bg-indigo-900/30 border border-indigo-700' : 'hover:bg-gray-800 border border-transparent'}`}
+            >
+              <span className="text-gray-200">{c.icon} {c.category}</span>
+              <span className="text-gray-400 font-mono">${c.spent.toFixed(2)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BudgetAnalysis({ analysis, onCategoryClick, activeDrill }: any) {
   const { overall, buckets, categories, alerts } = analysis
 
   return (
     <div className="space-y-6">
-      {/* Alerts */}
       {alerts.length > 0 && (
         <div className="bg-red-900/20 border border-red-800 rounded-xl p-4">
           <p className="text-red-400 font-medium text-sm mb-2">⚠ Over Budget</p>
@@ -129,7 +236,6 @@ function BudgetAnalysis({ analysis }: { analysis: any }) {
         </div>
       )}
 
-      {/* Overall */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <div className="flex justify-between items-baseline mb-3">
           <h2 className="text-lg font-semibold text-white">Overall</h2>
@@ -145,7 +251,6 @@ function BudgetAnalysis({ analysis }: { analysis: any }) {
         </p>
       </div>
 
-      {/* Buckets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {buckets.map((b: any) => {
           const meta = BUCKET_META[b.bucket]
@@ -163,12 +268,16 @@ function BudgetAnalysis({ analysis }: { analysis: any }) {
         })}
       </div>
 
-      {/* Category breakdown */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">By Category</h2>
+        <h2 className="text-lg font-semibold text-white mb-1">By Category</h2>
+        <p className="text-xs text-gray-500 mb-4">Click a category to see its transactions</p>
         <div className="space-y-4">
           {categories.filter((c: any) => c.budget > 0 || c.spent > 0).map((c: any) => (
-            <div key={c.category}>
+            <button
+              key={c.category}
+              onClick={() => onCategoryClick(c.category)}
+              className={`w-full text-left rounded-lg px-3 py-2 transition-colors ${activeDrill === c.category ? 'bg-indigo-900/30 border border-indigo-700' : 'hover:bg-gray-800 border border-transparent'}`}
+            >
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-200">{c.icon} {c.category}</span>
                 <span className={c.over ? 'text-red-400' : 'text-gray-400'}>
@@ -176,7 +285,7 @@ function BudgetAnalysis({ analysis }: { analysis: any }) {
                 </span>
               </div>
               <ProgressBar pct={c.pct} over={c.over} thin />
-            </div>
+            </button>
           ))}
         </div>
       </div>
