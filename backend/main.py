@@ -15,6 +15,7 @@ from api.import_routes import router as import_router
 from api.analytics import router as analytics_router
 from api.chat import router as chat_router
 from api.jobs import router as jobs_router
+from api.budget import router as budget_router
 
 setup_database()
 
@@ -34,6 +35,7 @@ app.include_router(import_router, prefix="/api/import", tags=["Import"])
 app.include_router(analytics_router, prefix="/api/analytics", tags=["Analytics"])
 app.include_router(chat_router, prefix="/api/chat", tags=["Chat"])
 app.include_router(jobs_router, prefix="/api/jobs", tags=["Jobs"])
+app.include_router(budget_router, prefix="/api/budget", tags=["Budget"])
 
 
 @app.get("/api/health")
