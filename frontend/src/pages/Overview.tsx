@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react'
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, Legend,
+  PieChart, Pie, Cell,
 } from 'recharts'
-import { ArrowUp, ArrowDown } from 'lucide-react'
+import Icon from '../components/Icon'
 import api from '../api/client'
 import TransactionList from '../components/TransactionList'
 
 // Target monthly savings rate (%). Frontend owns this threshold; adjust here.
 const SAVINGS_RATE_TARGET = 20
 
-const fmt = (n: number) =>
-  `$${Math.round(n).toLocaleString('en-US')}`
+// Tonal donut palette — steel blue / slate / muted purple variations (no rainbow)
+const DONUT_COLORS = ['#4c5e8b', '#585f72', '#6b5680', '#a8bbee', '#cdd4eb', '#d9bfef', '#aeb2bc']
 
+const fmt = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`
 const fmtSigned = (n: number) =>
   `${n >= 0 ? '+' : '-'}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`
 
@@ -109,79 +111,140 @@ export default function Overview() {
   // Category rows with delta vs previous month, top 6 by spend
   const prevByCat: Record<string, number> = {}
   prevCategories.forEach(c => { prevByCat[c.category] = c.total })
-  const categoryRows = [...categories]
-    .sort((a, b) => b.total - a.total)
+  const sortedCats = [...categories].sort((a, b) => b.total - a.total)
+  const categoryRows = sortedCats
     .slice(0, 6)
-    .map(c => ({
-      ...c,
-      delta: c.total - (prevByCat[c.category] || 0),
-    }))
+    .map(c => ({ ...c, delta: c.total - (prevByCat[c.category] || 0) }))
+
+  // Donut data — top 6 categories + "Other" rollup
+  const totalSpend = sortedCats.reduce((s, c) => s + c.total, 0)
+  const donutTop = sortedCats.slice(0, 6)
+  const donutOther = sortedCats.slice(6).reduce((s, c) => s + c.total, 0)
+  const donutData = [
+    ...donutTop.map(c => ({ name: c.category, value: c.total })),
+    ...(donutOther > 0 ? [{ name: 'Other', value: donutOther }] : []),
+  ]
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-content">Overview</h1>
+    <div className="flex flex-col gap-gutter">
+      {/* Page header */}
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-display-lg text-content">Overview</h1>
+          <p className="text-body-lg text-content-variant mt-1">Your financial snapshot for {new Date(year, mon - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.</p>
+        </div>
         <input
           type="month"
           value={month}
           onChange={e => setMonth(e.target.value)}
-          className="bg-surface-container border border-outline-variant/50 rounded-lg px-4 py-2 text-sm text-content"
+          className="input w-auto"
         />
       </div>
 
-      {/* ZONE 1 — THE VERDICT */}
+      {/* Bento — hero cashflow + trend (8col) | spending donut + AI card (4col) */}
       {overview && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Net cashflow hero */}
-          <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6 flex flex-col justify-center">
-            <p className="text-xs text-content-variant uppercase tracking-wide">Net Cashflow</p>
-            <p className={`text-4xl font-bold mt-2 ${cashflow >= 0 ? 'text-content' : 'text-danger'}`}>
-              {fmtSigned(cashflow)}
-            </p>
-            <p className="text-sm mt-1 text-content-variant">
-              {cashflow >= 0 ? 'surplus this month' : 'deficit this month'}
-            </p>
-            {prevOverview && (
-              <div className="flex items-center gap-1 mt-3 text-sm">
-                <DeltaBadge value={cashflowDelta} goodWhenPositive />
-                <span className="text-content-variant">vs last month ({fmtSigned(prevCashflow)})</span>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+          {/* Left: net cashflow hero + 6-month trend */}
+          <div className="lg:col-span-8 card p-6 flex flex-col justify-between">
+            <div>
+              <p className="label-caps text-content-variant">Net Cashflow · {new Date(year, mon - 1).toLocaleDateString('en-US', { month: 'short' })}</p>
+              <div className="flex items-baseline gap-3 mt-1">
+                <h2 className={`text-display-lg ${cashflow >= 0 ? 'text-content' : 'text-danger'}`}>
+                  {fmtSigned(cashflow)}
+                </h2>
+                {prevOverview && (
+                  <DeltaChip value={cashflowDelta} goodWhenPositive />
+                )}
               </div>
-            )}
+              <p className="text-body-sm text-content-variant mt-1">
+                {cashflow >= 0 ? 'surplus this month' : 'deficit this month'}
+                {prevOverview && ` · vs ${fmtSigned(prevCashflow)} last month`}
+              </p>
+            </div>
+            <div className="h-56 w-full mt-4">
+              {trendData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#dfe2ed" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill: '#5b5f68', fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#5b5f68', fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} axisLine={false} tickLine={false} />
+                    <Tooltip
+                      contentStyle={{ background: '#ffffff', border: '1px solid #aeb2bc', borderRadius: '8px', color: '#2f323b' }}
+                      formatter={(v: number) => fmt(v)}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Line type="monotone" dataKey="Income" stroke="#4c5e8b" strokeWidth={2.5} dot={false} />
+                    <Line type="monotone" dataKey="Expenses" stroke="#a83836" strokeWidth={2.5} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-content-variant text-center py-12">Not enough data</p>
+              )}
+            </div>
           </div>
 
-          {/* 6-month cashflow trend — the main story */}
-          <div className="lg:col-span-2 bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6">
-            <h2 className="text-sm font-semibold text-content-variant mb-3">Income vs Expenses — last 6 months</h2>
-            {trendData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={trendData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#dfe2ed" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fill: '#5b5f68', fontSize: 11 }} />
-                  <YAxis tick={{ fill: '#5b5f68', fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} />
-                  <Tooltip
-                    contentStyle={{ background: '#ffffff', border: '1px solid #aeb2bc', borderRadius: '8px', color: '#2f323b' }}
-                    formatter={(v: number) => fmt(v)}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" dataKey="Income" stroke="#4c5e8b" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="Expenses" stroke="#a83836" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-content-variant text-center py-12">Not enough data</p>
-            )}
+          {/* Right column stack */}
+          <div className="lg:col-span-4 flex flex-col gap-gutter">
+            {/* Spending donut */}
+            <div className="card p-6 flex-1 flex flex-col">
+              <p className="label-caps text-content-variant mb-3">Monthly Spending</p>
+              <div className="relative flex-1 flex items-center justify-center min-h-[200px]">
+                {donutData.length > 0 ? (
+                  <>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={62} outerRadius={90} paddingAngle={2} stroke="none">
+                          {donutData.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{ background: '#ffffff', border: '1px solid #aeb2bc', borderRadius: '8px' }}
+                          formatter={(v: number) => fmt(v)}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-body-sm text-content-variant">Total</span>
+                      <span className="text-headline-md text-content">{fmt(totalSpend)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-content-variant">No spending this month</p>
+                )}
+              </div>
+            </div>
+
+            {/* AI insight card */}
+            <div className="rounded-lg bg-primary-fixed border border-primary-fixed-dim p-6 relative overflow-hidden group cursor-default">
+              <div className="flex items-start gap-3 relative z-10">
+                <div className="p-2 bg-primary-on-fixed text-primary-fixed rounded-lg" style={{ backgroundColor: '#192d57' }}>
+                  <Icon name="smart_toy" />
+                </div>
+                <div>
+                  <h4 className="text-headline-md text-primary-on-fixed" style={{ color: '#192d57' }}>
+                    {savingsRateMessageTitle(overview.savings_rate)}
+                  </h4>
+                  <p className="text-body-sm mt-1" style={{ color: '#384a76' }}>
+                    {savingsRateMessageBody(overview.savings_rate, SAVINGS_RATE_TARGET)}
+                  </p>
+                </div>
+              </div>
+              <div className="absolute -bottom-4 -right-4 opacity-10 group-hover:rotate-12 transition-transform duration-500">
+                <Icon name="auto_awesome" size={120} />
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ZONE 2 — CONTEXTUAL KPIs */}
+      {/* Contextual KPIs */}
       {overview && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             label="Income"
             value={fmt(overview.income)}
             delta={prevOverview ? pctChange(overview.income, prevOverview.income) : null}
             goodWhenPositive
+            icon="south_west"
             onClick={() => handleTypeDrill('income')}
             active={drillType === 'income'}
           />
@@ -190,6 +253,7 @@ export default function Overview() {
             value={fmt(overview.expense)}
             delta={prevOverview ? pctChange(overview.expense, prevOverview.expense) : null}
             goodWhenPositive={false}
+            icon="north_east"
             sub={overview.income ? `${Math.round((overview.expense / overview.income) * 100)}% of income` : undefined}
             onClick={() => handleTypeDrill('expense')}
             active={drillType === 'expense'}
@@ -199,6 +263,7 @@ export default function Overview() {
             <KpiCard
               label="Net Worth"
               value={fmt(netWorth.net_worth)}
+              icon="account_balance"
               sub={`${fmt(netWorth.total_assets)} assets`}
             />
           )}
@@ -214,12 +279,12 @@ export default function Overview() {
         />
       )}
 
-      {/* ZONE 3 — WHERE IT WENT + ACCOUNTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      {/* Where it went + net worth breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
         {/* Category breakdown — horizontal bars with MoM delta */}
-        <div className="lg:col-span-2 bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6">
+        <div className="lg:col-span-2 card p-6">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-lg font-semibold text-content">Where your money went</h2>
+            <h2 className="text-headline-md text-content">Where your money went</h2>
             <span className="text-xs text-content-variant">Δ vs last month · click a row for detail</span>
           </div>
           {categoryRows.length > 0 ? (
@@ -234,22 +299,19 @@ export default function Overview() {
                       onClick={() => handleCategoryClick(c.category)}
                       className={`w-full text-left rounded-lg px-3 py-2 transition-colors ${active ? 'bg-surface-container' : 'hover:bg-surface-container/60'}`}
                     >
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-content">{c.icon} {c.category}</span>
+                      <div className="flex items-center justify-between text-sm mb-1.5">
+                        <span className="text-content font-medium">{c.icon} {c.category}</span>
                         <span className="flex items-center gap-3">
-                          <span className="text-content font-medium">{fmt(c.total)}</span>
+                          <span className="font-data text-content">{fmt(c.total)}</span>
                           {c.delta !== 0 && (
-                            <span className={`text-xs ${c.delta > 0 ? 'text-danger' : 'text-positive'}`}>
+                            <span className={`text-xs font-medium ${c.delta > 0 ? 'text-danger' : 'text-positive'}`}>
                               {c.delta > 0 ? '▲' : '▼'} {fmt(Math.abs(c.delta))}
                             </span>
                           )}
                         </span>
                       </div>
                       <div className="h-2 bg-surface-container rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full"
-                          style={{ width: `${max ? (c.total / max) * 100 : 0}%` }}
-                        />
+                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${max ? (c.total / max) * 100 : 0}%` }} />
                       </div>
                     </button>
                   )
@@ -262,25 +324,20 @@ export default function Overview() {
         </div>
 
         {/* Net worth breakdown */}
-        <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6">
-          <h2 className="text-lg font-semibold text-content mb-4">Net worth</h2>
+        <div className="card p-6">
+          <h2 className="text-headline-md text-content mb-4">Net worth</h2>
           {netWorth ? (
             <>
-              <p className="text-3xl font-bold text-content">{fmt(netWorth.net_worth)}</p>
+              <p className="text-headline-lg font-data text-content">{fmt(netWorth.net_worth)}</p>
               <div className="mt-4 space-y-2 text-sm">
-                <Row label="Assets" value={fmt(netWorth.total_assets)} valueClass="text-positive" />
-                <Row label="Liabilities" value={fmt(netWorth.total_liabilities)} valueClass="text-danger" />
+                <Row label="Assets" value={fmt(netWorth.total_assets)} valueClass="font-data text-positive" />
+                <Row label="Liabilities" value={fmt(netWorth.total_liabilities)} valueClass="font-data text-danger" />
               </div>
               <div className="mt-4 pt-4 border-t border-outline-variant/40 space-y-2 text-sm">
                 {Object.entries(netWorth.breakdown)
                   .filter(([, v]) => (v as number) !== 0)
                   .map(([type, v]) => (
-                    <Row
-                      key={type}
-                      label={type.replace('_', ' ')}
-                      value={fmt(v as number)}
-                      valueClass="text-content"
-                    />
+                    <Row key={type} label={type.replace('_', ' ')} value={fmt(v as number)} valueClass="font-data text-content" />
                   ))}
               </div>
             </>
@@ -303,36 +360,56 @@ export default function Overview() {
   )
 }
 
-function DeltaBadge({ value, goodWhenPositive }: { value: number; goodWhenPositive: boolean }) {
+function savingsRateMessageTitle(rate: number): string {
+  if (rate >= 30) return 'Strong savings'
+  if (rate >= 20) return 'On track'
+  if (rate >= 0) return 'Room to save'
+  return 'Overspending'
+}
+
+function savingsRateMessageBody(rate: number, target: number): string {
+  if (rate >= target) return `You saved ${rate.toFixed(0)}% of income this month, above your ${target}% target. Nice work keeping discretionary spend low.`
+  if (rate >= 0) return `You saved ${rate.toFixed(0)}% of income, below your ${target}% target. Trimming your top spend category could close the gap.`
+  return `You spent more than you earned this month. Review your largest categories below to find quick wins.`
+}
+
+function DeltaChip({ value, goodWhenPositive }: { value: number; goodWhenPositive: boolean }) {
   const up = value >= 0
   const good = goodWhenPositive ? up : !up
-  const Icon = up ? ArrowUp : ArrowDown
   return (
-    <span className={`inline-flex items-center gap-0.5 font-medium ${good ? 'text-positive' : 'text-danger'}`}>
-      <Icon size={14} />
+    <span className={`chip label-caps gap-1 ${good ? 'bg-secondary-container text-secondary-on-container' : 'bg-danger-container/40 text-danger-dim'}`}>
+      <Icon name={up ? 'trending_up' : 'trending_down'} size={14} />
       {fmtSigned(value)}
     </span>
   )
 }
 
 function KpiCard({
-  label, value, delta, goodWhenPositive = true, sub, onClick, active,
+  label, value, delta, goodWhenPositive = true, sub, icon, onClick, active,
 }: {
   label: string
   value: string
   delta?: number | null
   goodWhenPositive?: boolean
   sub?: string
+  icon?: string
   onClick?: () => void
   active?: boolean
 }) {
   return (
     <div
-      className={`bg-surface-lowest border rounded-xl p-4 ${active ? 'border-primary' : 'border-outline-variant/40'} ${onClick ? 'cursor-pointer hover:border-outline-variant' : ''}`}
+      className={`card p-5 ${active ? '!border-primary ring-1 ring-primary' : ''} ${onClick ? 'cursor-pointer hover:border-outline-variant' : ''}`}
       onClick={onClick}
     >
-      <p className="text-xs text-content-variant uppercase tracking-wide">{label}</p>
-      <p className="text-xl font-bold mt-1 text-content">{value}</p>
+      <div className="flex items-center justify-between">
+        <p className="label-caps text-content-variant">{label}</p>
+        {icon && (
+          <span className="w-8 h-8 rounded-full bg-surface-high flex items-center justify-center text-content-variant">
+            <Icon name={icon} size={18} />
+          </span>
+        )}
+      </div>
+      <p className="text-headline-md font-data text-content mt-2">{value}</p>
       <div className="flex items-center gap-2 mt-1 h-4">
         {delta != null && (
           <span className={`text-xs font-medium ${(goodWhenPositive ? delta >= 0 : delta <= 0) ? 'text-positive' : 'text-danger'}`}>
@@ -349,21 +426,19 @@ function SavingsRateCard({ rate, target }: { rate: number; target: number }) {
   const onTrack = rate >= target
   const pct = Math.max(0, Math.min(100, (rate / (target * 1.5)) * 100))
   return (
-    <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-4">
-      <p className="text-xs text-content-variant uppercase tracking-wide">Savings Rate</p>
-      <p className={`text-xl font-bold mt-1 ${onTrack ? 'text-positive' : 'text-tertiary'}`}>
+    <div className="card p-5">
+      <div className="flex items-center justify-between">
+        <p className="label-caps text-content-variant">Savings Rate</p>
+        <span className="w-8 h-8 rounded-full bg-surface-high flex items-center justify-center text-content-variant">
+          <Icon name="savings" size={18} />
+        </span>
+      </div>
+      <p className={`text-headline-md font-data mt-2 ${onTrack ? 'text-positive' : 'text-tertiary'}`}>
         {rate.toFixed(0)}%
       </p>
       <div className="relative h-2 bg-surface-container rounded-full mt-2 overflow-hidden">
-        <div
-          className={`h-full rounded-full ${onTrack ? 'bg-positive' : 'bg-tertiary'}`}
-          style={{ width: `${pct}%` }}
-        />
-        {/* target marker */}
-        <div
-          className="absolute top-0 h-full w-0.5 bg-gray-300"
-          style={{ left: `${Math.min(100, (target / (target * 1.5)) * 100)}%` }}
-        />
+        <div className={`h-full rounded-full ${onTrack ? 'bg-positive' : 'bg-tertiary'}`} style={{ width: `${pct}%` }} />
+        <div className="absolute top-0 h-full w-0.5 bg-outline" style={{ left: `${Math.min(100, (target / (target * 1.5)) * 100)}%` }} />
       </div>
       <p className="text-xs text-content-variant mt-1">target {target}%</p>
     </div>

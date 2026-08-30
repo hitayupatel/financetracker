@@ -5,6 +5,7 @@ export default {
     extend: {
       colors: {
         // Aurelian Finance — tonal spot palette (light)
+        background: '#f9f9fe',
         surface: {
           DEFAULT: '#f9f9fe',
           dim: '#d7dae4',
@@ -31,6 +32,10 @@ export default {
           on: '#f9f8ff',
           container: '#b6c8fc',
           'on-container': '#2e416c',
+          fixed: '#b9cbff',
+          'fixed-dim': '#a8bbee',
+          'on-fixed': '#192d57',
+          'on-fixed-variant': '#384a76',
         },
         secondary: {
           DEFAULT: '#585f72',
@@ -38,6 +43,10 @@ export default {
           on: '#f9f8ff',
           container: '#dbe2f9',
           'on-container': '#4a5164',
+          fixed: '#dbe2f9',
+          'fixed-dim': '#cdd4eb',
+          'on-fixed': '#383f51',
+          'on-fixed-variant': '#545b6e',
         },
         tertiary: {
           DEFAULT: '#6b5680',
@@ -45,6 +54,10 @@ export default {
           on: '#fff6ff',
           container: '#e7cdfe',
           'on-container': '#56426a',
+          fixed: '#e7cdfe',
+          'fixed-dim': '#d9bfef',
+          'on-fixed': '#433056',
+          'on-fixed-variant': '#604c74',
         },
         danger: {
           DEFAULT: '#a83836',
@@ -60,6 +73,16 @@ export default {
         sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
       },
+      fontSize: {
+        'display-lg': ['48px', { lineHeight: '56px', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'headline-lg': ['32px', { lineHeight: '40px', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'headline-md': ['24px', { lineHeight: '32px', fontWeight: '600' }],
+        'body-lg': ['18px', { lineHeight: '28px' }],
+        'body-md': ['16px', { lineHeight: '24px' }],
+        'body-sm': ['14px', { lineHeight: '20px' }],
+        'data-mono': ['14px', { lineHeight: '20px', letterSpacing: '-0.01em', fontWeight: '500' }],
+        'label-caps': ['12px', { lineHeight: '16px', letterSpacing: '0.05em', fontWeight: '700' }],
+      },
       borderRadius: {
         sm: '0.25rem',
         DEFAULT: '0.5rem',
@@ -71,6 +94,11 @@ export default {
       boxShadow: {
         'level-1': '0px 4px 20px rgba(76, 94, 139, 0.06)',
         'level-2': '0px 12px 32px rgba(76, 94, 139, 0.12)',
+        soft: '0px 4px 20px rgba(15, 23, 42, 0.05)',
+      },
+      spacing: {
+        gutter: '24px',
+        'container-padding': '32px',
       },
       maxWidth: {
         content: '1440px',

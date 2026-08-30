@@ -1,32 +1,35 @@
 import { useEffect, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import Icon from '../components/Icon'
 import api from '../api/client'
 import TransactionList from '../components/TransactionList'
 
 function CollapsibleSection({ title, subtitle, defaultOpen = true, children }: { title: string; subtitle?: string; defaultOpen?: boolean; children: React.ReactNode }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 overflow-hidden">
+    <div className="card overflow-hidden !p-0">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-container/40 transition-colors"
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-low transition-colors"
       >
         <div className="text-left">
-          <h2 className="text-lg font-semibold text-content">{title}</h2>
-          {subtitle && <p className="text-xs text-content-variant">{subtitle}</p>}
+          <h2 className="text-headline-md text-content">{title}</h2>
+          {subtitle && <p className="text-body-sm text-content-variant mt-0.5">{subtitle}</p>}
         </div>
-        {open ? <ChevronDown size={18} className="text-content-variant" /> : <ChevronRight size={18} className="text-content-variant" />}
+        <Icon name={open ? 'expand_less' : 'expand_more'} className="text-content-variant" size={22} />
       </button>
       {open && <div className="px-6 pb-6">{children}</div>}
     </div>
   )
 }
 
-const BUCKET_META: Record<string, { label: string; color: string; bar: string; desc: string }> = {
-  needs: { label: 'Needs', color: 'text-primary', bar: 'bg-primary', desc: 'Rent, groceries, utilities, transport, insurance' },
-  wants: { label: 'Wants', color: 'text-tertiary', bar: 'bg-tertiary', desc: 'Dining, shopping, entertainment, subscriptions' },
-  savings: { label: 'Savings & Investments', color: 'text-positive', bar: 'bg-positive', desc: 'Emergency fund, stocks, ETFs, retirement' },
+const BUCKET_META: Record<string, { label: string; color: string; bar: string; icon: string; desc: string }> = {
+  needs: { label: 'Needs', color: 'text-primary', bar: 'bg-primary', icon: 'home', desc: 'Rent, groceries, utilities, transport, insurance' },
+  wants: { label: 'Wants', color: 'text-tertiary', bar: 'bg-tertiary', icon: 'shopping_bag', desc: 'Dining, shopping, entertainment, subscriptions' },
+  savings: { label: 'Savings & Investments', color: 'text-positive', bar: 'bg-positive', icon: 'savings', desc: 'Emergency fund, stocks, ETFs, retirement' },
 }
+
+const fmt0 = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+const fmt2 = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 export default function Budget() {
   const [month, setMonth] = useState(() => {
@@ -94,7 +97,6 @@ export default function Budget() {
       setDrillTransactions([])
       return
     }
-    // Find all categories in this bucket (from the analysis category list)
     const bucketCats = (analysis?.categories || []).filter((c: any) => c.bucket === bucketName)
     const catIds = bucketCats
       .map((bc: any) => categories.find((c: any) => c.name === bc.category)?.id)
@@ -102,7 +104,6 @@ export default function Budget() {
     if (catIds.length === 0) return
 
     const { startDate, endDate } = dateRange()
-    // Fetch transactions for each category and merge
     const results = await Promise.all(
       catIds.map((id: number) =>
         api.get(`/transactions?category_id=${id}&start_date=${startDate}&end_date=${endDate}&limit=500`)
@@ -146,20 +147,28 @@ export default function Budget() {
   const hasBudget = analysis?.has_budget
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-content">Budget</h1>
-          {analysis && (
-            hasBudget ? (
-              <span className="text-xs bg-emerald-900/50 text-positive px-2 py-1 rounded-full">● Budget set</span>
-            ) : (
-              <span className="text-xs bg-surface-container text-content-variant px-2 py-1 rounded-full">○ No budget</span>
-            )
-          )}
+    <div className="flex flex-col gap-gutter">
+      {/* Page header */}
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-display-lg text-content">Budget</h1>
+            {analysis && (
+              hasBudget ? (
+                <span className="chip label-caps bg-secondary-container text-secondary-on-container gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-positive" /> Budget set
+                </span>
+              ) : (
+                <span className="chip label-caps bg-surface-container text-content-variant gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-outline" /> No budget
+                </span>
+              )
+            )}
+          </div>
+          <p className="text-body-lg text-content-variant mt-1">Track and control your monthly spending.</p>
         </div>
         <div className="flex gap-3">
-          <select value={month} onChange={e => setMonth(e.target.value)} className="bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-2 text-content text-sm">
+          <select value={month} onChange={e => setMonth(e.target.value)} className="input">
             {months.map(m => {
               const budgeted = budgetedMonths.includes(m)
               return (
@@ -169,16 +178,17 @@ export default function Budget() {
               )
             })}
           </select>
-          <button onClick={startSetup} className="bg-primary hover:bg-primary-dim text-content px-4 py-2 rounded-lg text-sm">
+          <button onClick={startSetup} className="btn-primary">
+            <Icon name={hasBudget ? 'edit' : 'add'} size={18} />
             {hasBudget ? 'Edit Budget' : 'Set Up Budget'}
           </button>
         </div>
       </div>
 
       {/* Legend for indicators */}
-      <div className="flex gap-4 mb-4 text-xs text-content-variant">
-        <span>● = budget configured</span>
-        <span>○ = no budget (spending only)</span>
+      <div className="flex gap-4 text-xs text-content-variant -mt-2">
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-positive" /> budget configured</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-outline" /> no budget (spending only)</span>
       </div>
 
       {/* Editing mode */}
@@ -204,16 +214,37 @@ export default function Budget() {
 
           {/* Category drill-down */}
           {drillCategory && drillTransactions.length > 0 && (
-            <div className="mt-6">
-              <TransactionList
-                transactions={drillTransactions}
-                title={drillCategory}
-                onClose={() => { setDrillCategory(null); setDrillTransactions([]) }}
-              />
-            </div>
+            <TransactionList
+              transactions={drillTransactions}
+              title={drillCategory}
+              onClose={() => { setDrillCategory(null); setDrillTransactions([]) }}
+            />
           )}
         </>
       )}
+    </div>
+  )
+}
+
+/** Circular budget-health ring (SVG). */
+function HealthRing({ pct, over }: { pct: number; over: boolean }) {
+  const r = 45
+  const circ = 2 * Math.PI * r
+  const clamped = Math.min(Math.max(pct, 0), 100)
+  const offset = circ - (clamped / 100) * circ
+  const score = Math.max(0, Math.round(100 - pct))
+  const stroke = over ? '#a83836' : clamped > 85 ? '#6b5680' : '#2e7d5b'
+  return (
+    <div className="relative w-44 h-44 flex items-center justify-center">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r={r} fill="none" stroke="#ecedf6" strokeWidth="8" />
+        <circle cx="50" cy="50" r={r} fill="none" stroke={stroke} strokeWidth="8" strokeLinecap="round"
+          strokeDasharray={circ} strokeDashoffset={offset} className="transition-all duration-700" />
+      </svg>
+      <div className="absolute flex flex-col items-center">
+        <span className="text-display-lg font-data" style={{ color: stroke }}>{score}</span>
+        <span className="label-caps text-content-variant">Score</span>
+      </div>
     </div>
   )
 }
@@ -222,52 +253,61 @@ function NoBudgetView({ analysis, onCategoryClick, onBucketClick, activeDrill, o
   const { overall, buckets, categories } = analysis
 
   return (
-    <div className="space-y-6">
-      <div className="bg-surface-lowest border border-tertiary/40 rounded-xl p-5 flex items-center justify-between">
-        <div>
-          <p className="text-content font-medium">No budget set for this month</p>
-          <p className="text-content-variant text-sm">Here's your actual spending. Set a budget to track against it.</p>
+    <div className="flex flex-col gap-gutter">
+      <div className="rounded-lg bg-tertiary-fixed/40 border border-tertiary/30 p-5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-tertiary-fixed text-tertiary-on-fixed flex items-center justify-center">
+            <Icon name="lightbulb" />
+          </div>
+          <div>
+            <p className="text-content font-semibold">No budget set for this month</p>
+            <p className="text-content-variant text-sm">Here's your actual spending. Set a budget to track against it.</p>
+          </div>
         </div>
-        <button onClick={onSetup} className="bg-primary hover:bg-primary-dim text-content px-5 py-2 rounded-lg text-sm whitespace-nowrap">Set Up Budget</button>
+        <button onClick={onSetup} className="btn-primary whitespace-nowrap"><Icon name="add" size={18} /> Set Up Budget</button>
       </div>
 
-      {/* Spending total */}
-      <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6">
-        <p className="text-xs text-content-variant uppercase tracking-wide">Total Spending</p>
-        <p className="text-2xl font-bold text-content mt-1">${overall.spent.toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
-      </div>
-
-      {/* Bucket spending (no budget bars, just totals) — clickable */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {buckets.map((b: any) => {
-          const meta = BUCKET_META[b.bucket]
-          const active = activeDrill === b.bucket.charAt(0).toUpperCase() + b.bucket.slice(1)
-          return (
-            <button
-              key={b.bucket}
-              onClick={() => onBucketClick(b.bucket)}
-              className={`text-left bg-surface-lowest border rounded-xl p-5 transition-colors ${active ? 'border-primary' : 'border-outline-variant/40 hover:border-outline-variant'}`}
-            >
-              <p className={`font-semibold ${meta.color}`}>{meta.label}</p>
-              <p className="text-xs text-content-variant mb-3">{meta.desc}</p>
-              <p className="text-xl font-bold text-content">${b.spent.toFixed(0)}</p>
-              <p className="text-xs text-content-variant">spent · click to view</p>
-            </button>
-          )
-        })}
+      {/* Bento — spending total (4col) + bucket cards (8col) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+        <div className="lg:col-span-4 card p-6 flex flex-col justify-center">
+          <p className="label-caps text-content-variant">Total Spending</p>
+          <p className="text-display-lg font-data text-content mt-1">${fmt0(overall.spent)}</p>
+          <p className="text-body-sm text-content-variant mt-1">this month, across all categories</p>
+        </div>
+        <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {buckets.map((b: any) => {
+            const meta = BUCKET_META[b.bucket]
+            const active = activeDrill === b.bucket.charAt(0).toUpperCase() + b.bucket.slice(1)
+            return (
+              <button
+                key={b.bucket}
+                onClick={() => onBucketClick(b.bucket)}
+                className={`text-left card p-5 transition-all ${active ? '!border-primary ring-1 ring-primary' : 'hover:shadow-level-2'}`}
+              >
+                <div className="w-10 h-10 rounded-full bg-surface-high flex items-center justify-center text-content-variant mb-3">
+                  <Icon name={meta.icon} />
+                </div>
+                <p className={`font-semibold ${meta.color}`}>{meta.label}</p>
+                <p className="text-xs text-content-variant mb-3">{meta.desc}</p>
+                <p className="text-headline-md font-data text-content">${fmt0(b.spent)}</p>
+                <p className="text-xs text-content-variant">spent · click to view</p>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Category spending — clickable, collapsible */}
       <CollapsibleSection title="Spending by Category" subtitle="Click a category to see its transactions">
-        <div className="space-y-2">
+        <div className="space-y-1">
           {categories.filter((c: any) => c.spent > 0).map((c: any) => (
             <button
               key={c.category}
               onClick={() => onCategoryClick(c.category)}
-              className={`w-full flex justify-between items-center text-sm px-3 py-2 rounded-lg transition-colors ${activeDrill === c.category ? 'bg-primary-container/40 border border-primary' : 'hover:bg-surface-container border border-transparent'}`}
+              className={`w-full flex justify-between items-center text-sm px-3 py-2.5 rounded-lg transition-colors ${activeDrill === c.category ? 'bg-surface-container' : 'hover:bg-surface-low'}`}
             >
-              <span className="text-content">{c.icon} {c.category}</span>
-              <span className="text-content-variant font-mono">${c.spent.toFixed(2)}</span>
+              <span className="flex items-center gap-2 text-content"><span className="text-lg">{c.icon}</span> {c.category}</span>
+              <span className="text-content font-data">${fmt2(c.spent)}</span>
             </button>
           ))}
         </div>
@@ -278,74 +318,92 @@ function NoBudgetView({ analysis, onCategoryClick, onBucketClick, activeDrill, o
 
 function BudgetAnalysis({ analysis, onCategoryClick, onBucketClick, activeDrill }: any) {
   const { overall, buckets, categories, alerts } = analysis
+  const spentPct = overall.budget ? (overall.spent / overall.budget) * 100 : 0
+  const over = overall.spent > overall.budget
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-gutter">
       {alerts.length > 0 && (
-        <div className="bg-danger/10 border border-danger/40 rounded-xl p-4">
-          <p className="text-danger font-medium text-sm mb-2">⚠ Over Budget</p>
+        <div className="rounded-lg bg-danger-container/30 border border-danger-container p-4">
+          <p className="text-danger-dim font-semibold text-sm mb-2 flex items-center gap-2"><Icon name="warning" size={18} /> Over Budget</p>
           {alerts.map((a: string, i: number) => (
-            <p key={i} className="text-danger text-xs">{a}</p>
+            <p key={i} className="text-danger-dim text-xs">{a}</p>
           ))}
         </div>
       )}
 
-      <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6">
-        <div className="flex justify-between items-baseline mb-3">
-          <h2 className="text-lg font-semibold text-content">Overall</h2>
-          <span className="text-sm text-content-variant">
-            ${overall.spent.toLocaleString('en-US', { maximumFractionDigits: 0 })} of ${overall.budget.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-          </span>
-        </div>
-        <ProgressBar pct={overall.pct} over={overall.spent > overall.budget} />
-        <p className="text-xs text-content-variant mt-2">
-          {overall.remaining >= 0
-            ? `$${overall.remaining.toLocaleString('en-US', { maximumFractionDigits: 0 })} remaining`
-            : `$${Math.abs(overall.remaining).toLocaleString('en-US', { maximumFractionDigits: 0 })} over budget`}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {buckets.map((b: any) => {
-          const meta = BUCKET_META[b.bucket]
-          const active = activeDrill === b.bucket.charAt(0).toUpperCase() + b.bucket.slice(1)
-          return (
-            <button
-              key={b.bucket}
-              onClick={() => onBucketClick(b.bucket)}
-              className={`text-left bg-surface-lowest border rounded-xl p-5 transition-colors ${active ? 'border-primary' : 'border-outline-variant/40 hover:border-outline-variant'}`}
-            >
-              <p className={`font-semibold ${meta.color}`}>{meta.label}</p>
-              <p className="text-xs text-content-variant mb-3">{meta.desc}</p>
-              <ProgressBar pct={b.pct} over={b.over} barColor={meta.bar} />
-              <div className="flex justify-between text-xs mt-2">
-                <span className="text-content-variant">${b.spent.toFixed(0)} spent</span>
-                <span className="text-content-variant">${b.budget.toFixed(0)} budget</span>
+      {/* Bento — health ring + monthly goal (4col) | category bars (8col) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+        {/* Left column: health + overall */}
+        <div className="lg:col-span-4 flex flex-col gap-gutter">
+          <div className="card p-6 flex flex-col items-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-primary to-secondary-container" />
+            <h2 className="text-headline-md text-content w-full text-left mb-2">Budget Health</h2>
+            <HealthRing pct={spentPct} over={over} />
+            <div className="w-full flex justify-between items-center px-4 mt-4">
+              <div className="text-center flex-1">
+                <div className="label-caps text-content-variant">Spent</div>
+                <div className="font-data text-content mt-0.5">${fmt0(overall.spent)}</div>
               </div>
-            </button>
-          )
-        })}
-      </div>
-
-      <CollapsibleSection title="By Category" subtitle="Click a category to see its transactions">
-        <div className="space-y-4">
-          {categories.filter((c: any) => c.budget > 0 || c.spent > 0).map((c: any) => (
-            <button
-              key={c.category}
-              onClick={() => onCategoryClick(c.category)}
-              className={`w-full text-left rounded-lg px-3 py-2 transition-colors ${activeDrill === c.category ? 'bg-primary-container/40 border border-primary' : 'hover:bg-surface-container border border-transparent'}`}
-            >
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-content">{c.icon} {c.category}</span>
-                <span className={c.over ? 'text-danger' : 'text-content-variant'}>
-                  ${c.spent.toFixed(0)} / ${c.budget.toFixed(0)}
-                </span>
+              <div className="h-8 w-px bg-outline-variant/60" />
+              <div className="text-center flex-1">
+                <div className="label-caps text-content-variant">{overall.remaining >= 0 ? 'Remaining' : 'Over'}</div>
+                <div className={`font-data mt-0.5 ${overall.remaining >= 0 ? 'text-positive' : 'text-danger'}`}>
+                  ${fmt0(Math.abs(overall.remaining))}
+                </div>
               </div>
-              <ProgressBar pct={c.pct} over={c.over} thin />
-            </button>
-          ))}
+            </div>
+          </div>
+
+          <div className="card p-6">
+            <h2 className="text-headline-md text-content mb-3">Monthly Budget</h2>
+            <div className="flex items-baseline gap-1 mb-3">
+              <span className="text-display-lg font-data text-content">${fmt0(overall.budget)}</span>
+              <span className="text-body-md text-content-variant">/ month</span>
+            </div>
+            <ProgressBar pct={overall.pct} over={over} />
+            <p className="text-body-sm text-content-variant mt-2">
+              {over
+                ? `$${fmt0(Math.abs(overall.remaining))} over your budget this month.`
+                : `$${fmt0(overall.remaining)} left to spend this month.`}
+            </p>
+          </div>
         </div>
-      </CollapsibleSection>
+
+        {/* Right column: category spending bars */}
+        <div className="lg:col-span-8 card p-6">
+          <div className="flex justify-between items-center mb-5">
+            <h2 className="text-headline-md text-content">Category Spending</h2>
+            <span className="chip label-caps bg-secondary-container text-secondary-on-container">This Month</span>
+          </div>
+          <div className="space-y-5">
+            {categories.filter((c: any) => c.budget > 0 || c.spent > 0).map((c: any) => (
+              <button
+                key={c.category}
+                onClick={() => onCategoryClick(c.category)}
+                className={`w-full text-left rounded-lg p-2 -m-2 transition-colors ${activeDrill === c.category ? 'bg-surface-low' : 'hover:bg-surface-low'}`}
+              >
+                <div className="flex justify-between items-end mb-1.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-surface-high flex items-center justify-center text-lg shrink-0">{c.icon}</div>
+                    <div>
+                      <div className="text-body-md font-semibold text-content">{c.category}</div>
+                      <div className="text-body-sm text-content-variant">{c.bucket ? BUCKET_META[c.bucket]?.label : ''}</div>
+                    </div>
+                  </div>
+                  <div className={`font-data ${c.over ? 'text-danger' : 'text-content'}`}>
+                    ${fmt0(c.spent)} <span className="text-content-variant">/ ${fmt0(c.budget)}</span>
+                  </div>
+                </div>
+                <ProgressBar pct={c.pct} over={c.over} />
+                <div className={`mt-1 text-right text-body-sm ${c.over ? 'text-danger font-semibold' : 'text-content-variant'}`}>
+                  {c.over ? `Over budget by $${fmt0(c.spent - c.budget)}` : `${Math.round(c.pct)}% used`}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -354,29 +412,29 @@ function BudgetEditor({ suggestion, categories, allocations, setAllocations, onS
   const total = Object.values(allocations).reduce((s: number, v: any) => s + (+v || 0), 0)
 
   return (
-    <div className="bg-surface-lowest border border-primary/40 rounded-xl p-6">
+    <div className="card p-6 !border-primary/40">
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-content">Set Your Budget</h2>
-          <p className="text-xs text-content-variant">Suggested from your last {suggestion.months_analyzed} months. Adjust as needed.</p>
+          <h2 className="text-headline-md text-content">Set Your Budget</h2>
+          <p className="text-body-sm text-content-variant">Suggested from your last {suggestion.months_analyzed} months. Adjust as needed.</p>
         </div>
-        <span className="text-lg font-bold text-primary">${total.toLocaleString('en-US', { maximumFractionDigits: 0 })}/mo</span>
+        <span className="text-headline-md font-data text-primary">${fmt0(total)}/mo</span>
       </div>
 
-      <div className="space-y-3 max-h-[500px] overflow-y-auto">
+      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
         {categories.map((cat: any) => {
           const sugg = suggestion.categories.find((s: any) => s.category === cat.name)
           return (
             <div key={cat.id} className="flex items-center justify-between gap-4">
-              <span className="text-sm text-content flex-1">{cat.icon} {cat.name}</span>
-              {sugg && <span className="text-xs text-content-variant">avg ${sugg.avg}</span>}
+              <span className="text-sm text-content flex-1 flex items-center gap-2"><span className="text-lg">{cat.icon}</span> {cat.name}</span>
+              {sugg && <span className="text-xs text-content-variant font-data">avg ${sugg.avg}</span>}
               <div className="flex items-center gap-1">
                 <span className="text-content-variant text-sm">$</span>
                 <input
                   type="number"
                   value={allocations[cat.id] || 0}
                   onChange={e => setAllocations({ ...allocations, [cat.id]: +e.target.value })}
-                  className="bg-surface-container border border-outline-variant/50 rounded px-2 py-1 text-content text-sm w-24 text-right"
+                  className="input w-24 text-right font-data !py-1.5"
                 />
               </div>
             </div>
@@ -385,8 +443,8 @@ function BudgetEditor({ suggestion, categories, allocations, setAllocations, onS
       </div>
 
       <div className="flex gap-3 mt-6">
-        <button onClick={onSave} className="bg-primary hover:bg-primary-dim text-content px-6 py-2 rounded-lg text-sm">Save Budget</button>
-        <button onClick={onCancel} className="bg-surface-high hover:bg-gray-600 text-content px-6 py-2 rounded-lg text-sm">Cancel</button>
+        <button onClick={onSave} className="btn-primary"><Icon name="check" size={18} /> Save Budget</button>
+        <button onClick={onCancel} className="btn-secondary">Cancel</button>
       </div>
     </div>
   )
@@ -396,8 +454,8 @@ function ProgressBar({ pct, over, barColor = 'bg-primary', thin = false }: { pct
   const width = Math.min(pct, 100)
   const color = over ? 'bg-danger' : barColor
   return (
-    <div className={`w-full bg-surface-container rounded-full ${thin ? 'h-1.5' : 'h-3'}`}>
-      <div className={`${color} ${thin ? 'h-1.5' : 'h-3'} rounded-full transition-all`} style={{ width: `${width}%` }} />
+    <div className={`w-full bg-surface-low rounded-full overflow-hidden border border-outline-variant/40 ${thin ? 'h-1.5' : 'h-3'}`}>
+      <div className={`${color} ${thin ? 'h-1.5' : 'h-3'} rounded-full transition-all duration-500`} style={{ width: `${width}%` }} />
     </div>
   )
 }

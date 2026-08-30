@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts'
+import Icon from '../components/Icon'
 import api from '../api/client'
 import TransactionList from '../components/TransactionList'
 
@@ -35,7 +36,6 @@ export default function Analytics() {
     setDrillTransactions(res.data)
   }
 
-  // Handle bar click — recharts passes the data point
   const handleBarClick = (data: any, type: string) => {
     if (data && data.year) {
       loadDrill(data.year, data.monthNum, type, data.month)
@@ -43,18 +43,25 @@ export default function Analytics() {
   }
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-content mb-6">Analytics</h1>
+    <div className="flex flex-col gap-gutter">
+      <div>
+        <h1 className="text-headline-lg text-content">Analytics</h1>
+        <p className="text-body-md text-content-variant mt-1">Income and spending trends across the last year.</p>
+      </div>
 
-      <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-content mb-1">Income vs Expenses (12 months)</h2>
-        <p className="text-xs text-content-variant mb-4">Click a bar to view that month's transactions</p>
+      <div className="card p-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-headline-md text-content">Income vs Expenses</h2>
+          <span className="chip label-caps bg-secondary-container text-secondary-on-container">12 Months</span>
+        </div>
+        <p className="text-body-sm text-content-variant mb-4">Click a bar to view that month's transactions.</p>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={chartData}>
-              <XAxis dataKey="month" tick={{ fill: '#5b5f68', fontSize: 11 }} />
-              <YAxis tick={{ fill: '#5b5f68', fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} />
-              <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #aeb2bc', borderRadius: '8px', color: '#2f323b' }} formatter={(v: number) => `$${v.toLocaleString()}`} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#dfe2ed" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: '#5b5f68', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#5b5f68', fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #aeb2bc', borderRadius: '8px', color: '#2f323b' }} formatter={(v: number) => `$${v.toLocaleString()}`} cursor={{ fill: 'rgba(76,94,139,0.06)' }} />
               <Legend />
               <Bar dataKey="Income" fill="#4c5e8b" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(d: any) => handleBarClick(d, 'income')} />
               <Bar dataKey="Expenses" fill="#a83836" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(d: any) => handleBarClick(d, 'expense')} />
@@ -75,8 +82,8 @@ export default function Analytics() {
       )}
 
       {drill && drillTransactions.length === 0 && (
-        <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6 text-center text-content-variant">
-          No {drill.type} transactions for {drill.month}
+        <div className="card p-6 text-center text-content-variant flex items-center justify-center gap-2">
+          <Icon name="info" size={18} /> No {drill.type} transactions for {drill.month}
         </div>
       )}
     </div>
