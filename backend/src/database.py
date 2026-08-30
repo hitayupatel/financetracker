@@ -91,6 +91,22 @@ class Budget(Base):
     category = relationship("Category")
 
 
+class JobRun(Base):
+    """History of categorization / re-evaluation runs."""
+
+    __tablename__ = "job_runs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source = Column(String(20), nullable=False)  # import, reevaluate
+    scope = Column(String(30), nullable=True)  # uncategorized, all
+    total = Column(Integer, default=0)
+    updated = Column(Integer, default=0)
+    failed = Column(Integer, default=0)
+    model = Column(String(50), nullable=True)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    finished_at = Column(DateTime, nullable=True)
+
+
 # Database session management
 
 _engine = None

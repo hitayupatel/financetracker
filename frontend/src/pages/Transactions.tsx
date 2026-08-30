@@ -66,8 +66,14 @@ export default function Transactions() {
   }
 
   // Re-evaluate
+  const [showHistory, setShowHistory] = useState(false)
+  const [history, setHistory] = useState<any[]>([])
   const [revalRunning, setRevalRunning] = useState(false)
   const [revalStatus, setRevalStatus] = useState<any>(null)
+
+  const loadHistory = () => {
+    api.get('/jobs/history').then(r => setHistory(r.data))
+  }
 
   const startReevaluate = async (scope: string) => {
     setRevalRunning(true)
@@ -80,6 +86,7 @@ export default function Transactions() {
         clearInterval(poll)
         setRevalRunning(false)
         load()
+        loadHistory()
       }
     }, 2000)
   }
@@ -142,7 +149,48 @@ export default function Transactions() {
             {revalStatus.progress} / {revalStatus.total} — {revalStatus.updated} categorized
           </span>
         )}
+        <button
+          onClick={() => { setShowHistory(!showHistory); if (!showHistory) loadHistory() }}
+          className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm ml-auto"
+        >
+          📜 Run History
+        </button>
       </div>
+
+      {/* Run history */}
+      {showHistory && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
+          <h3 className="text-sm font-semibold text-white mb-3">Re-evaluation History</h3>
+          {history.length === 0 ? (
+            <p className="text-xs text-gray-500">No runs yet.</p>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="text-gray-500">
+                <tr>
+                  <th className="text-left py-1">When</th>
+                  <th className="text-left py-1">Scope</th>
+                  <th className="text-right py-1">Total</th>
+                  <th className="text-right py-1">Categorized</th>
+                  <th className="text-right py-1">Failed</th>
+                  <th className="text-left py-1 pl-3">Model</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((run: any) => (
+                  <tr key={run.id} className="border-t border-gray-800 text-gray-300">
+                    <td className="py-1.5">{run.started_at ? new Date(run.started_at).toLocaleString() : '—'}</td>
+                    <td className="py-1.5">{run.scope || run.source}</td>
+                    <td className="py-1.5 text-right">{run.total}</td>
+                    <td className="py-1.5 text-right text-green-400">{run.updated}</td>
+                    <td className="py-1.5 text-right text-amber-400">{run.failed}</td>
+                    <td className="py-1.5 pl-3 text-gray-500">{run.model || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       <p className="text-sm text-gray-400 mb-4">
         {transactions.length} transactions | Total: ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
