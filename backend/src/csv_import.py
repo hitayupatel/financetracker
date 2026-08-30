@@ -117,10 +117,15 @@ def _detect_transaction_type(description: str, current_type: str) -> str:
 
     Transfers (money moving between your own accounts) are never income/expense.
     Investments are Robinhood/brokerage moves.
+    Outgoing Zelle payments to people are always expenses (not transfers/loans).
     """
     if not description:
         return current_type
     desc_lower = description.lower()
+
+    # Outgoing Zelle to a person is always an expense — takes priority
+    if "zelle payment to" in desc_lower:
+        return "expense"
 
     for kw in INVESTMENT_KEYWORDS:
         if kw in desc_lower:
