@@ -59,23 +59,23 @@ export default function Import() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-white mb-6">Import Statements</h1>
+      <h1 className="text-2xl font-bold text-content mb-6">Import Statements</h1>
 
       {/* Account selector */}
       <div className="mb-6">
-        <label className="text-sm text-gray-400 block mb-2">Import to Account</label>
+        <label className="text-sm text-content-variant block mb-2">Import to Account</label>
         <select
           value={accountId || ''}
           onChange={e => setAccountId(+e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white text-sm w-full max-w-xs"
+          className="bg-surface-container border border-outline-variant/50 rounded-lg px-4 py-2 text-content text-sm w-full max-w-xs"
         >
           {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </div>
 
       {/* Upload area */}
-      <div className="bg-gray-900 border-2 border-dashed border-gray-700 rounded-xl p-12 text-center hover:border-indigo-500 transition-colors mb-6">
-        <p className="text-gray-400 mb-4">Drop a CSV or PDF bank statement here</p>
+      <div className="bg-surface-lowest border-2 border-dashed border-outline-variant/50 rounded-xl p-12 text-center hover:border-primary transition-colors mb-6">
+        <p className="text-content-variant mb-4">Drop a CSV or PDF bank statement here</p>
         <input
           type="file"
           accept=".csv,.pdf"
@@ -83,14 +83,14 @@ export default function Import() {
             const f = e.target.files?.[0]
             if (f) handleFileSelect(f)
           }}
-          className="text-sm text-gray-400"
+          className="text-sm text-content-variant"
         />
       </div>
 
       {/* Preview */}
       {preview && !preview.error && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Preview</h2>
+        <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-content mb-4">Preview</h2>
 
           {fileType === 'csv' && preview.detected_format && (
             <div className="grid grid-cols-4 gap-3 mb-4">
@@ -103,17 +103,17 @@ export default function Import() {
 
           {fileType === 'pdf' && (
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="bg-gray-800 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Institution</p>
-                <p className="text-white font-medium">{preview.institution_display}</p>
+              <div className="bg-surface-container rounded-lg p-3">
+                <p className="text-xs text-content-variant">Institution</p>
+                <p className="text-content font-medium">{preview.institution_display}</p>
               </div>
-              <div className="bg-gray-800 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Year</p>
-                <p className="text-white font-medium">{preview.year}</p>
+              <div className="bg-surface-container rounded-lg p-3">
+                <p className="text-xs text-content-variant">Year</p>
+                <p className="text-content font-medium">{preview.year}</p>
               </div>
-              <div className="bg-gray-800 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Transactions Found</p>
-                <p className="text-white font-medium">{preview.total_found}</p>
+              <div className="bg-surface-container rounded-lg p-3">
+                <p className="text-xs text-content-variant">Transactions Found</p>
+                <p className="text-content font-medium">{preview.total_found}</p>
               </div>
             </div>
           )}
@@ -122,18 +122,18 @@ export default function Import() {
           {fileType === 'csv' && preview.rows && (
             <div className="overflow-x-auto max-h-48 text-xs">
               <table className="w-full">
-                <thead className="bg-gray-800">
+                <thead className="bg-surface-container">
                   <tr>
                     {preview.columns?.map((col: string) => (
-                      <th key={col} className="text-left px-2 py-1 text-gray-400">{col}</th>
+                      <th key={col} className="text-left px-2 py-1 text-content-variant">{col}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {preview.rows.slice(0, 5).map((row: any, i: number) => (
-                    <tr key={i} className="border-t border-gray-800">
+                    <tr key={i} className="border-t border-outline-variant/40">
                       {preview.columns?.map((col: string) => (
-                        <td key={col} className="px-2 py-1 text-gray-300">{String(row[col] ?? '')}</td>
+                        <td key={col} className="px-2 py-1 text-content-variant">{String(row[col] ?? '')}</td>
                       ))}
                     </tr>
                   ))}
@@ -145,21 +145,21 @@ export default function Import() {
           {fileType === 'pdf' && preview.sample_transactions && (
             <div className="overflow-x-auto max-h-48 text-xs">
               <table className="w-full">
-                <thead className="bg-gray-800">
+                <thead className="bg-surface-container">
                   <tr>
-                    <th className="text-left px-2 py-1 text-gray-400">Date</th>
-                    <th className="text-left px-2 py-1 text-gray-400">Type</th>
-                    <th className="text-right px-2 py-1 text-gray-400">Amount</th>
-                    <th className="text-left px-2 py-1 text-gray-400">Description</th>
+                    <th className="text-left px-2 py-1 text-content-variant">Date</th>
+                    <th className="text-left px-2 py-1 text-content-variant">Type</th>
+                    <th className="text-right px-2 py-1 text-content-variant">Amount</th>
+                    <th className="text-left px-2 py-1 text-content-variant">Description</th>
                   </tr>
                 </thead>
                 <tbody>
                   {preview.sample_transactions.map((t: any, i: number) => (
-                    <tr key={i} className="border-t border-gray-800">
-                      <td className="px-2 py-1 text-gray-300">{t.date}</td>
-                      <td className="px-2 py-1 text-gray-300">{t.type}</td>
-                      <td className="px-2 py-1 text-gray-300 text-right">${t.amount.toFixed(2)}</td>
-                      <td className="px-2 py-1 text-gray-300">{t.description?.slice(0, 40)}</td>
+                    <tr key={i} className="border-t border-outline-variant/40">
+                      <td className="px-2 py-1 text-content-variant">{t.date}</td>
+                      <td className="px-2 py-1 text-content-variant">{t.type}</td>
+                      <td className="px-2 py-1 text-content-variant text-right">${t.amount.toFixed(2)}</td>
+                      <td className="px-2 py-1 text-content-variant">{t.description?.slice(0, 40)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -170,11 +170,11 @@ export default function Import() {
           {/* Amount sign rule (only for single amount column CSVs) */}
           {fileType === 'csv' && preview.detected_format?.has_amount && !preview.detected_format?.has_debit_credit && (
             <div className="mt-4">
-              <label className="text-sm text-gray-400 block mb-2">How should the Amount column be interpreted?</label>
+              <label className="text-sm text-content-variant block mb-2">How should the Amount column be interpreted?</label>
               <select
                 value={amountSignRule}
                 onChange={e => setAmountSignRule(e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                className="bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-2 text-content text-sm"
               >
                 <option>Negative = Expense, Positive = Income</option>
                 <option>Positive = Expense, Negative = Income</option>
@@ -188,7 +188,7 @@ export default function Import() {
           <button
             onClick={handleImport}
             disabled={loading}
-            className="mt-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg text-sm font-medium"
+            className="mt-4 bg-primary hover:bg-primary-dim disabled:opacity-50 text-content px-6 py-2 rounded-lg text-sm font-medium"
           >
             {loading ? 'Importing...' : 'Import'}
           </button>
@@ -196,22 +196,22 @@ export default function Import() {
       )}
 
       {preview?.error && (
-        <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 mb-6">
-          <p className="text-red-400">{preview.error}</p>
+        <div className="bg-danger/10 border border-danger/40 rounded-xl p-4 mb-6">
+          <p className="text-danger">{preview.error}</p>
         </div>
       )}
 
       {/* Result */}
       {result && (
-        <div className={`p-4 rounded-xl border ${result.error || !result.success ? 'bg-red-900/20 border-red-800' : 'bg-green-900/20 border-green-800'}`}>
+        <div className={`p-4 rounded-xl border ${result.error || !result.success ? 'bg-danger/10 border-danger/40' : 'bg-green-900/20 border-green-800'}`}>
           {result.error ? (
-            <p className="text-red-400">{result.error}</p>
+            <p className="text-danger">{result.error}</p>
           ) : (
             <div>
-              <p className="text-green-400 font-medium">
+              <p className="text-positive font-medium">
                 Imported {result.imported} transactions ({result.skipped} skipped)
               </p>
-              {result.institution && <p className="text-gray-400 text-sm mt-1">Detected: {result.institution}</p>}
+              {result.institution && <p className="text-content-variant text-sm mt-1">Detected: {result.institution}</p>}
             </div>
           )}
         </div>
@@ -222,9 +222,9 @@ export default function Import() {
 
 function Indicator({ label, found }: { label: string; found: boolean }) {
   return (
-    <div className={`rounded-lg p-3 ${found ? 'bg-green-900/20 border border-green-800' : 'bg-gray-800 border border-gray-700'}`}>
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className={`font-medium ${found ? 'text-green-400' : 'text-gray-500'}`}>{found ? '✓ Found' : '✗ Missing'}</p>
+    <div className={`rounded-lg p-3 ${found ? 'bg-green-900/20 border border-green-800' : 'bg-surface-container border border-outline-variant/50'}`}>
+      <p className="text-xs text-content-variant">{label}</p>
+      <p className={`font-medium ${found ? 'text-positive' : 'text-content-variant'}`}>{found ? '✓ Found' : '✗ Missing'}</p>
     </div>
   )
 }

@@ -44,24 +44,24 @@ export default function Analytics() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-white mb-6">Analytics</h1>
+      <h1 className="text-2xl font-bold text-content mb-6">Analytics</h1>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
-        <h2 className="text-lg font-semibold text-white mb-1">Income vs Expenses (12 months)</h2>
-        <p className="text-xs text-gray-500 mb-4">Click a bar to view that month's transactions</p>
+      <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6 mb-6">
+        <h2 className="text-lg font-semibold text-content mb-1">Income vs Expenses (12 months)</h2>
+        <p className="text-xs text-content-variant mb-4">Click a bar to view that month's transactions</p>
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={chartData}>
-              <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-              <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} />
-              <Tooltip contentStyle={{ background: '#1f2937', border: '1px solid #374151' }} formatter={(v: number) => `$${v.toLocaleString()}`} />
+              <XAxis dataKey="month" tick={{ fill: '#5b5f68', fontSize: 11 }} />
+              <YAxis tick={{ fill: '#5b5f68', fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} />
+              <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #aeb2bc', borderRadius: '8px', color: '#2f323b' }} formatter={(v: number) => `$${v.toLocaleString()}`} />
               <Legend />
-              <Bar dataKey="Income" fill="#10b981" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(d: any) => handleBarClick(d, 'income')} />
-              <Bar dataKey="Expenses" fill="#ef4444" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(d: any) => handleBarClick(d, 'expense')} />
+              <Bar dataKey="Income" fill="#4c5e8b" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(d: any) => handleBarClick(d, 'income')} />
+              <Bar dataKey="Expenses" fill="#a83836" radius={[4, 4, 0, 0]} cursor="pointer" onClick={(d: any) => handleBarClick(d, 'expense')} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-gray-500 text-center py-12">Not enough data</p>
+          <p className="text-content-variant text-center py-12">Not enough data</p>
         )}
       </div>
 
@@ -75,7 +75,7 @@ export default function Analytics() {
       )}
 
       {drill && drillTransactions.length === 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 text-center text-gray-500">
+        <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-6 text-center text-content-variant">
           No {drill.type} transactions for {drill.month}
         </div>
       )}

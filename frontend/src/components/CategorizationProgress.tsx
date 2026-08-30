@@ -27,38 +27,38 @@ export default function CategorizationProgress() {
   const pct = status.total > 0 ? (status.progress / status.total) * 100 : 0
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 bg-gray-900 border border-indigo-700 rounded-xl shadow-lg z-50 overflow-hidden">
+    <div className="fixed bottom-4 right-4 w-96 bg-surface-lowest border border-primary rounded-xl shadow-lg z-50 overflow-hidden">
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-2 cursor-pointer hover:bg-gray-800/50"
+        className="flex items-center justify-between px-4 py-2 cursor-pointer hover:bg-surface-container/50"
         onClick={() => setMinimized(!minimized)}
       >
-        <span className="text-xs text-indigo-400 font-medium">
+        <span className="text-xs text-primary font-medium">
           {isRunning
             ? `${status.source === 'import' ? 'Categorizing' : 'Re-evaluating'} ${status.progress}/${status.total}`
             : 'Categorization complete'}
         </span>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">{Math.round(pct)}%</span>
-          {minimized ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+          <span className="text-xs text-content-variant">{Math.round(pct)}%</span>
+          {minimized ? <ChevronUp size={14} className="text-content-variant" /> : <ChevronDown size={14} className="text-content-variant" />}
         </div>
       </div>
 
       {/* Body */}
       {!minimized && (
         <div className="px-4 pb-3">
-          <div className="w-full bg-gray-800 rounded-full h-2 mb-3">
+          <div className="w-full bg-surface-container rounded-full h-2 mb-3">
             <div
-              className="bg-indigo-500 h-2 rounded-full transition-all duration-500"
+              className="bg-primary h-2 rounded-full transition-all duration-500"
               style={{ width: `${pct}%` }}
             />
           </div>
 
           {/* Stats */}
           <div className="flex gap-4 text-xs mb-2">
-            <span className="text-green-400">✓ {status.updated} categorized</span>
-            <span className="text-amber-400">⚠ {status.failed} failed</span>
-            {isRunning && <span className="text-gray-500">{status.total - status.progress} left</span>}
+            <span className="text-positive">✓ {status.updated} categorized</span>
+            <span className="text-tertiary">⚠ {status.failed} failed</span>
+            {isRunning && <span className="text-content-variant">{status.total - status.progress} left</span>}
           </div>
 
           {/* Failed items toggle */}
@@ -66,16 +66,16 @@ export default function CategorizationProgress() {
             <div>
               <button
                 onClick={() => setShowFailed(!showFailed)}
-                className="text-xs text-amber-400 hover:text-amber-300 underline"
+                className="text-xs text-tertiary hover:text-amber-300 underline"
               >
                 {showFailed ? 'Hide' : 'View'} {status.failed} uncategorized
               </button>
               {showFailed && (
-                <div className="mt-2 max-h-40 overflow-y-auto bg-gray-800 rounded-lg p-2">
+                <div className="mt-2 max-h-40 overflow-y-auto bg-surface-container rounded-lg p-2">
                   {status.failed_items?.map((item: any, i: number) => (
-                    <div key={i} className="flex justify-between text-xs py-1 border-b border-gray-700 last:border-0">
-                      <span className="text-gray-300 truncate mr-2">{item.description}</span>
-                      <span className="text-gray-500 font-mono whitespace-nowrap">${item.amount.toFixed(2)}</span>
+                    <div key={i} className="flex justify-between text-xs py-1 border-b border-outline-variant/50 last:border-0">
+                      <span className="text-content-variant truncate mr-2">{item.description}</span>
+                      <span className="text-content-variant font-mono whitespace-nowrap">${item.amount.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -87,7 +87,7 @@ export default function CategorizationProgress() {
           {justDone && (
             <button
               onClick={() => setDismissed(true)}
-              className="mt-2 w-full text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg py-1.5"
+              className="mt-2 w-full text-xs bg-surface-container hover:bg-surface-high text-content-variant rounded-lg py-1.5"
             >
               Dismiss
             </button>

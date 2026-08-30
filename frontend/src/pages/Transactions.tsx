@@ -105,7 +105,7 @@ export default function Transactions() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-white mb-4">Transactions</h1>
+      <h1 className="text-2xl font-bold text-content mb-4">Transactions</h1>
 
       {/* Filters */}
       <div className="flex gap-4 mb-4">
@@ -113,12 +113,12 @@ export default function Transactions() {
           placeholder="Search descriptions..."
           value={filter.search}
           onChange={e => setFilter({ ...filter, search: e.target.value })}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm flex-1"
+          className="bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-2 text-content text-sm flex-1"
         />
         <select
           value={filter.type}
           onChange={e => setFilter({ ...filter, type: e.target.value })}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+          className="bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-2 text-content text-sm"
         >
           <option value="">All Types</option>
           <option value="expense">Expense</option>
@@ -131,7 +131,7 @@ export default function Transactions() {
         <select
           value={filter.account_id}
           onChange={e => setFilter({ ...filter, account_id: e.target.value })}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+          className="bg-surface-container border border-outline-variant/50 rounded-lg px-3 py-2 text-content text-sm"
         >
           <option value="">All Accounts</option>
           {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -143,25 +143,25 @@ export default function Transactions() {
         <button
           onClick={() => startReevaluate('uncategorized')}
           disabled={revalRunning}
-          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm"
+          className="bg-primary hover:bg-primary-dim disabled:opacity-50 text-content px-4 py-2 rounded-lg text-sm"
         >
           🔄 Re-evaluate Uncategorized
         </button>
         <button
           onClick={() => startReevaluate('all')}
           disabled={revalRunning}
-          className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm"
+          className="bg-surface-high hover:bg-gray-600 disabled:opacity-50 text-content px-4 py-2 rounded-lg text-sm"
         >
           🔄 Re-evaluate All
         </button>
         {revalRunning && revalStatus && (
-          <span className="text-indigo-400 text-sm self-center">
+          <span className="text-primary text-sm self-center">
             {revalStatus.progress} / {revalStatus.total} — {revalStatus.updated} categorized
           </span>
         )}
         <button
           onClick={() => { setShowHistory(!showHistory); if (!showHistory) loadHistory() }}
-          className="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg text-sm ml-auto"
+          className="bg-surface-container hover:bg-surface-high text-content-variant px-4 py-2 rounded-lg text-sm ml-auto"
         >
           📜 Run History
         </button>
@@ -169,13 +169,13 @@ export default function Transactions() {
 
       {/* Run history */}
       {showHistory && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
-          <h3 className="text-sm font-semibold text-white mb-3">Re-evaluation History</h3>
+        <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 p-4 mb-4">
+          <h3 className="text-sm font-semibold text-content mb-3">Re-evaluation History</h3>
           {history.length === 0 ? (
-            <p className="text-xs text-gray-500">No runs yet.</p>
+            <p className="text-xs text-content-variant">No runs yet.</p>
           ) : (
             <table className="w-full text-xs">
-              <thead className="text-gray-500">
+              <thead className="text-content-variant">
                 <tr>
                   <th className="text-left py-1">When</th>
                   <th className="text-left py-1">Scope</th>
@@ -187,13 +187,13 @@ export default function Transactions() {
               </thead>
               <tbody>
                 {history.map((run: any) => (
-                  <tr key={run.id} className="border-t border-gray-800 text-gray-300">
+                  <tr key={run.id} className="border-t border-outline-variant/40 text-content-variant">
                     <td className="py-1.5">{run.started_at ? new Date(run.started_at).toLocaleString() : '—'}</td>
                     <td className="py-1.5">{run.scope || run.source}</td>
                     <td className="py-1.5 text-right">{run.total}</td>
-                    <td className="py-1.5 text-right text-green-400">{run.updated}</td>
-                    <td className="py-1.5 text-right text-amber-400">{run.failed}</td>
-                    <td className="py-1.5 pl-3 text-gray-500">{run.model || '—'}</td>
+                    <td className="py-1.5 text-right text-positive">{run.updated}</td>
+                    <td className="py-1.5 text-right text-tertiary">{run.failed}</td>
+                    <td className="py-1.5 pl-3 text-content-variant">{run.model || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -202,39 +202,39 @@ export default function Transactions() {
         </div>
       )}
 
-      <p className="text-sm text-gray-400 mb-4">
+      <p className="text-sm text-content-variant mb-4">
         {transactions.length} transactions | Total: ${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}
       </p>
 
       {loading ? (
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-content-variant">Loading...</p>
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="bg-surface-lowest border border-outline-variant/30 rounded-lg shadow-level-1 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-gray-800">
+            <thead className="bg-surface-container">
               <tr>
-                <th className="text-left px-4 py-3 text-gray-400 font-medium">Date</th>
-                <th className="text-left px-4 py-3 text-gray-400 font-medium">Description</th>
-                <th className="text-left px-4 py-3 text-gray-400 font-medium">Category</th>
-                <th className="text-left px-4 py-3 text-gray-400 font-medium">Type</th>
-                <th className="text-right px-4 py-3 text-gray-400 font-medium">Amount</th>
-                <th className="text-right px-4 py-3 text-gray-400 font-medium w-20">Actions</th>
+                <th className="text-left px-4 py-3 text-content-variant font-medium">Date</th>
+                <th className="text-left px-4 py-3 text-content-variant font-medium">Description</th>
+                <th className="text-left px-4 py-3 text-content-variant font-medium">Category</th>
+                <th className="text-left px-4 py-3 text-content-variant font-medium">Type</th>
+                <th className="text-right px-4 py-3 text-content-variant font-medium">Amount</th>
+                <th className="text-right px-4 py-3 text-content-variant font-medium w-20">Actions</th>
               </tr>
             </thead>
             <tbody>
               {transactions.map(txn => (
                 editingId === txn.id ? (
-                  <tr key={txn.id} className="border-t border-gray-800 bg-gray-800/50">
-                    <td className="px-4 py-2"><input type="date" value={editForm.date} onChange={e => setEditForm({ ...editForm, date: e.target.value })} className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs w-full" /></td>
-                    <td className="px-4 py-2"><input value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs w-full" /></td>
+                  <tr key={txn.id} className="border-t border-outline-variant/40 bg-surface-container/50">
+                    <td className="px-4 py-2"><input type="date" value={editForm.date} onChange={e => setEditForm({ ...editForm, date: e.target.value })} className="bg-surface-high border border-outline-variant rounded px-2 py-1 text-content text-xs w-full" /></td>
+                    <td className="px-4 py-2"><input value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} className="bg-surface-high border border-outline-variant rounded px-2 py-1 text-content text-xs w-full" /></td>
                     <td className="px-4 py-2">
-                      <select value={editForm.category_id} onChange={e => setEditForm({ ...editForm, category_id: e.target.value })} className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs w-full">
+                      <select value={editForm.category_id} onChange={e => setEditForm({ ...editForm, category_id: e.target.value })} className="bg-surface-high border border-outline-variant rounded px-2 py-1 text-content text-xs w-full">
                         <option value="">None</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}
                       </select>
                     </td>
                     <td className="px-4 py-2">
-                      <select value={editForm.transaction_type} onChange={e => setEditForm({ ...editForm, transaction_type: e.target.value })} className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs">
+                      <select value={editForm.transaction_type} onChange={e => setEditForm({ ...editForm, transaction_type: e.target.value })} className="bg-surface-high border border-outline-variant rounded px-2 py-1 text-content text-xs">
                         <option value="expense">Expense</option>
                         <option value="income">Income</option>
                         <option value="payment">Payment</option>
@@ -243,21 +243,21 @@ export default function Transactions() {
                         <option value="savings">Savings</option>
                       </select>
                     </td>
-                    <td className="px-4 py-2"><input type="number" step="0.01" value={editForm.amount} onChange={e => setEditForm({ ...editForm, amount: +e.target.value })} className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs w-24 text-right" /></td>
+                    <td className="px-4 py-2"><input type="number" step="0.01" value={editForm.amount} onChange={e => setEditForm({ ...editForm, amount: +e.target.value })} className="bg-surface-high border border-outline-variant rounded px-2 py-1 text-content text-xs w-24 text-right" /></td>
                     <td className="px-4 py-2 text-right">
-                      <button onClick={saveEdit} className="text-green-400 hover:text-green-300 mr-2"><Check size={16} /></button>
-                      <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-white"><X size={16} /></button>
+                      <button onClick={saveEdit} className="text-positive hover:text-positive mr-2"><Check size={16} /></button>
+                      <button onClick={() => setEditingId(null)} className="text-content-variant hover:text-content"><X size={16} /></button>
                     </td>
                   </tr>
                 ) : (
-                  <tr key={txn.id} className="border-t border-gray-800 hover:bg-gray-800/50">
-                    <td className="px-4 py-3 text-gray-300">{txn.date}</td>
-                    <td className="px-4 py-3 text-gray-100">{txn.description || '—'}</td>
+                  <tr key={txn.id} className="border-t border-outline-variant/40 hover:bg-surface-container/50">
+                    <td className="px-4 py-3 text-content-variant">{txn.date}</td>
+                    <td className="px-4 py-3 text-content">{txn.description || '—'}</td>
                     <td className="px-4 py-3">
                       <select
                         value={txn.category_id || ''}
                         onChange={e => quickChangeCategory(txn.id, e.target.value)}
-                        className={`bg-transparent border border-gray-700 hover:border-indigo-500 rounded px-2 py-1 text-xs cursor-pointer ${txn.category_id ? 'text-gray-300' : 'text-amber-400'}`}
+                        className={`bg-transparent border border-outline-variant/50 hover:border-primary rounded px-2 py-1 text-xs cursor-pointer ${txn.category_id ? 'text-content-variant' : 'text-tertiary'}`}
                       >
                         <option value="">— Uncategorized —</option>
                         {categories.map(c => (
@@ -267,15 +267,15 @@ export default function Transactions() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                        txn.transaction_type === 'income' ? 'bg-green-900/50 text-green-400' :
-                        txn.transaction_type === 'expense' ? 'bg-red-900/50 text-red-400' :
-                        'bg-blue-900/50 text-blue-400'
+                        txn.transaction_type === 'income' ? 'bg-positive/15 text-positive' :
+                        txn.transaction_type === 'expense' ? 'bg-danger/15 text-danger' :
+                        'bg-blue-900/50 text-primary'
                       }`}>{txn.transaction_type}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-gray-100">${txn.amount.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-content">${txn.amount.toFixed(2)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => startEdit(txn)} className="text-gray-400 hover:text-indigo-400 mr-2"><Pencil size={14} /></button>
-                      <button onClick={() => deleteTransaction(txn.id)} className="text-gray-400 hover:text-red-400"><Trash2 size={14} /></button>
+                      <button onClick={() => startEdit(txn)} className="text-content-variant hover:text-primary mr-2"><Pencil size={14} /></button>
+                      <button onClick={() => deleteTransaction(txn.id)} className="text-content-variant hover:text-danger"><Trash2 size={14} /></button>
                     </td>
                   </tr>
                 )

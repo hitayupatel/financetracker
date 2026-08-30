@@ -35,12 +35,12 @@ export default function Chat() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <h1 className="text-2xl font-bold text-white mb-4">Ask AI</h1>
+      <h1 className="text-2xl font-bold text-content mb-4">Ask AI</h1>
 
       {/* Status */}
       {status && !status.online && (
-        <div className="bg-red-900/20 border border-red-800 rounded-lg p-3 mb-4">
-          <p className="text-red-400 text-sm">Ollama offline. Run: <code className="bg-gray-800 px-1 rounded">ollama serve</code></p>
+        <div className="bg-danger/10 border border-danger/40 rounded-lg p-3 mb-4">
+          <p className="text-danger text-sm">Ollama offline. Run: <code className="bg-surface-container px-1 rounded">ollama serve</code></p>
         </div>
       )}
 
@@ -49,15 +49,15 @@ export default function Chat() {
         {messages.length === 0 && (
           <div className="text-center py-16">
             <p className="text-4xl mb-4">🤖</p>
-            <p className="text-gray-400">Ask anything about your finances</p>
+            <p className="text-content-variant">Ask anything about your finances</p>
           </div>
         )}
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[70%] rounded-xl px-4 py-3 ${
               msg.role === 'user'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-800 text-gray-100 border border-gray-700'
+                ? 'bg-primary text-content'
+                : 'bg-surface-container text-content border border-outline-variant/50'
             }`}>
               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
             </div>
@@ -65,8 +65,8 @@ export default function Chat() {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3">
-              <p className="text-sm text-gray-400 animate-pulse">Thinking...</p>
+            <div className="bg-surface-container border border-outline-variant/50 rounded-xl px-4 py-3">
+              <p className="text-sm text-content-variant animate-pulse">Thinking...</p>
             </div>
           </div>
         )}
@@ -80,9 +80,9 @@ export default function Chat() {
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && send()}
           placeholder="Ask about your finances..."
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-indigo-500"
+          className="flex-1 bg-surface-container border border-outline-variant/50 rounded-xl px-4 py-3 text-content text-sm focus:outline-none focus:border-primary"
         />
-        <button onClick={send} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 rounded-xl disabled:opacity-50">
+        <button onClick={send} disabled={loading} className="bg-primary hover:bg-primary-dim text-content px-4 rounded-xl disabled:opacity-50">
           <Send size={18} />
         </button>
       </div>
