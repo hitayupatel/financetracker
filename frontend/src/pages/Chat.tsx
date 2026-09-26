@@ -41,7 +41,7 @@ export default function Chat() {
   }
 
   const online = status?.online
-  const modelName = status?.model || 'local model'
+  const modelName = status?.configured_model || status?.model || 'local model'
 
   return (
     <div className="flex flex-col gap-gutter">
