@@ -7,6 +7,7 @@ import {
 import Icon from '../components/Icon'
 import api from '../api/client'
 import TransactionList from '../components/TransactionList'
+import RangeSummary from '../components/RangeSummary'
 
 // Target monthly savings rate (%). Frontend owns this threshold; adjust here.
 const SAVINGS_RATE_TARGET = 20
@@ -140,6 +141,9 @@ export default function Overview() {
           className="input w-auto"
         />
       </div>
+
+      {/* Period summary — YTD / relative / custom date range */}
+      <RangeSummary />
 
       {/* Bento — hero cashflow + trend (8col) | spending donut + AI card (4col) */}
       {overview && (

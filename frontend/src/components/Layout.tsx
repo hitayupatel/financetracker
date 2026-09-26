@@ -1,4 +1,5 @@
-import { Outlet, NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import Icon from './Icon'
 import CategorizationProgress from './CategorizationProgress'
 
@@ -13,19 +14,47 @@ const navItems = [
 ]
 
 export default function Layout() {
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const location = useLocation()
+
+  // Close the mobile drawer whenever the route changes
+  useEffect(() => {
+    setDrawerOpen(false)
+  }, [location.pathname])
+
   return (
     <div className="min-h-screen bg-background text-content">
-      {/* Sidebar — fixed 280px */}
-      <nav className="hidden md:flex flex-col fixed left-0 top-0 h-full w-[280px] bg-surface-lowest border-r border-outline-variant/40 py-6 z-50">
-        {/* Brand */}
+      {/* Backdrop (mobile only, when drawer open) */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar — fixed 280px on desktop, slide-in drawer on mobile */}
+      <nav
+        className={`flex flex-col fixed left-0 top-0 h-full w-[280px] bg-surface-lowest border-r border-outline-variant/40 py-6 z-50 transition-transform duration-300 md:translate-x-0 ${
+          drawerOpen ? 'translate-x-0 shadow-level-2' : '-translate-x-full'
+        }`}
+      >
+        {/* Brand + close button (mobile) */}
         <div className="px-6 mb-6 flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-primary">
             <Icon name="account_balance_wallet" fill />
           </div>
-          <div>
-            <h1 className="text-headline-md font-bold text-primary leading-none">Aurelian</h1>
+          <div className="flex-1">
+            <h1 className="text-headline-md font-bold text-primary leading-none">Finance Master</h1>
             <p className="label-caps text-content-variant mt-1">Personal Finance</p>
           </div>
+          <button
+            className="md:hidden p-1.5 rounded-full text-content-variant hover:bg-surface-high"
+            onClick={() => setDrawerOpen(false)}
+            aria-label="Close menu"
+          >
+            <Icon name="close" size={22} />
+          </button>
         </div>
 
         {/* Nav */}
@@ -66,26 +95,41 @@ export default function Layout() {
       </nav>
 
       {/* Top app bar — 64px */}
-      <header className="fixed top-0 right-0 md:w-[calc(100%-280px)] w-full h-16 bg-surface-lowest border-b border-outline-variant/40 flex items-center justify-between px-6 z-40">
-        <div className="flex-1 max-w-md">
-          <div className="relative flex items-center h-10 rounded-full bg-surface-low px-4 focus-within:ring-2 focus-within:ring-primary transition-all">
-            <Icon name="search" className="text-content-variant mr-2" size={20} />
-            <input
-              className="w-full bg-transparent border-none outline-none text-body-sm text-content placeholder-content-variant p-0"
-              placeholder="Search accounts, transactions…"
-              type="text"
-            />
+      <header className="fixed top-0 right-0 w-full md:w-[calc(100%-280px)] h-16 bg-surface-lowest border-b border-outline-variant/40 flex items-center justify-between px-4 md:px-6 z-30">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* Hamburger (mobile only) */}
+          <button
+            className="md:hidden p-2 rounded-full text-content-variant hover:bg-surface-low transition-colors shrink-0"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open menu"
+          >
+            <Icon name="menu" size={24} />
+          </button>
+
+          {/* Brand (mobile only, since sidebar is hidden) */}
+          <span className="md:hidden font-display font-bold text-primary text-lg">Finance Master</span>
+
+          {/* Search (desktop only) */}
+          <div className="hidden md:block flex-1 max-w-md">
+            <div className="relative flex items-center h-10 rounded-full bg-surface-low px-4 focus-within:ring-2 focus-within:ring-primary transition-all">
+              <Icon name="search" className="text-content-variant mr-2" size={20} />
+              <input
+                className="w-full bg-transparent border-none outline-none text-body-sm text-content placeholder-content-variant p-0"
+                placeholder="Search accounts, transactions…"
+                type="text"
+              />
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2 shrink-0">
           <button className="p-2 rounded-full text-content-variant hover:bg-surface-low transition-colors relative">
             <Icon name="notifications" size={22} />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full" />
           </button>
-          <button className="p-2 rounded-full text-content-variant hover:bg-surface-low transition-colors">
+          <button className="hidden sm:inline-flex p-2 rounded-full text-content-variant hover:bg-surface-low transition-colors">
             <Icon name="history" size={22} />
           </button>
-          <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center text-primary ml-2 border border-outline-variant/40">
+          <div className="w-9 h-9 rounded-full bg-secondary-container flex items-center justify-center text-primary ml-1 md:ml-2 border border-outline-variant/40">
             <Icon name="person" fill size={22} />
           </div>
         </div>
@@ -93,7 +137,7 @@ export default function Layout() {
 
       {/* Main content */}
       <main className="md:ml-[280px] pt-16 min-h-screen">
-        <div className="max-w-content mx-auto p-container-padding">
+        <div className="max-w-content mx-auto p-4 md:p-container-padding">
           <Outlet />
         </div>
       </main>

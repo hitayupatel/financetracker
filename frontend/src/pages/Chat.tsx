@@ -59,7 +59,7 @@ export default function Chat() {
               <Icon name="smart_toy" fill />
             </div>
             <div>
-              <h2 className="text-headline-md text-content leading-none">Aurelian AI</h2>
+              <h2 className="text-headline-md text-content leading-none">Finance Master AI</h2>
               <p className="text-body-sm flex items-center gap-1.5 mt-1">
                 <span className={`w-2 h-2 rounded-full inline-block ${online ? 'bg-positive' : 'bg-danger'}`} />
                 <span className={online ? 'text-positive' : 'text-danger'}>
@@ -142,7 +142,7 @@ export default function Chat() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-                placeholder="Ask Aurelian AI anything…"
+                placeholder="Ask Finance Master AI anything…"
                 rows={1}
                 className="w-full bg-transparent border-none resize-none py-3 px-4 text-body-md text-content focus:ring-0 outline-none max-h-32"
                 style={{ minHeight: 48 }}

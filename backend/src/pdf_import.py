@@ -12,7 +12,7 @@ import pdfplumber
 
 from src.config import load_config
 from src.database import get_session, Transaction, Account, is_duplicate_transaction
-from src.categorizer import categorize_transaction
+from src.categorizer import categorize_transaction, categorize_by_keywords
 
 
 def _parse_date(date_str: str, year_hint: Optional[int] = None) -> Optional[date]:
@@ -87,16 +87,28 @@ def _parse_chase_credit(text, year_hint):
 
 def _parse_chase_checking(text, year_hint):
     transactions = []
-    pattern = r"(\d{2}/\d{2})\s+(.+?)\s+(-?[\$]?[\d,]+\.\d{2})\s*$"
+    # Chase checking lines can be either:
+    #   (a) date  description  amount  balance   <- two trailing numbers
+    #   (b) date  description  amount             <- single trailing number
+    # We must capture the AMOUNT, not the running balance. Try (a) first so the
+    # trailing balance column isn't mistaken for the amount.
+    pattern_amt_bal = r"(\d{2}/\d{2})\s+(.+?)\s+(-?[\$]?[\d,]+\.\d{2})\s+(-?[\$]?[\d,]+\.\d{2})\s*$"
+    pattern_amt = r"(\d{2}/\d{2})\s+(.+?)\s+(-?[\$]?[\d,]+\.\d{2})\s*$"
     for line in text.split("\n"):
-        match = re.match(pattern, line.strip())
-        if match:
-            date_str, description, amount_str = match.groups()
-            parsed_date = _parse_date(date_str, year_hint)
-            amount = _parse_amount(amount_str)
-            if parsed_date and amount is not None:
-                txn_type = "income" if amount > 0 else "expense"
-                transactions.append({"date": parsed_date, "description": description.strip(), "amount": abs(amount), "type": txn_type})
+        line = line.strip()
+        m = re.match(pattern_amt_bal, line)
+        if m:
+            date_str, description, amount_str, _balance_str = m.groups()
+        else:
+            m = re.match(pattern_amt, line)
+            if not m:
+                continue
+            date_str, description, amount_str = m.groups()
+        parsed_date = _parse_date(date_str, year_hint)
+        amount = _parse_amount(amount_str)
+        if parsed_date and amount is not None:
+            txn_type = "income" if amount > 0 else "expense"
+            transactions.append({"date": parsed_date, "description": description.strip(), "amount": abs(amount), "type": txn_type})
     return transactions
 
 
@@ -246,12 +258,13 @@ def _parse_webull(text, year_hint):
 
 def _parse_generic(text, year_hint):
     transactions = []
-    patterns = [
-        r"(\d{2}/\d{2}/\d{4})\s+(.+?)\s+(-?\$?[\d,]+\.\d{2})\s*$",
-        r"(\d{2}/\d{2})\s+(.+?)\s+(-?\$?[\d,]+\.\d{2})\s*$",
-        r"(\d{4}-\d{2}-\d{2})\s+(.+?)\s+(-?\$?[\d,]+\.\d{2})\s*$",
-    ]
-    for pattern in patterns:
+    # Each pattern captures: date, description, amount, and an OPTIONAL trailing
+    # balance column. When a balance is present we still use the first number
+    # (the amount) — never the running balance.
+    date_res = [r"\d{2}/\d{2}/\d{4}", r"\d{2}/\d{2}", r"\d{4}-\d{2}-\d{2}"]
+    num = r"-?\$?[\d,]+\.\d{2}"
+    for date_re in date_res:
+        pattern = rf"({date_re})\s+(.+?)\s+({num})(?:\s+{num})?\s*$"
         for line in text.split("\n"):
             match = re.match(pattern, line.strip())
             if match:
@@ -366,7 +379,8 @@ def import_pdf(file_content: bytes, account_id: int, institution: Optional[str] 
                 skipped += 1
                 continue
 
-            category_id = categorize_transaction(txn["description"])
+            # Fast keyword-only pass during import; LLM runs in the background.
+            category_id = categorize_by_keywords(txn["description"])
             db_txn = Transaction(
                 date=txn["date"],
                 amount=txn["amount"],
@@ -397,23 +411,125 @@ def import_pdf(file_content: bytes, account_id: int, institution: Optional[str] 
 
 
 def _llm_categorize_background(account_id: int):
-    """Run LLM categorization in a background thread."""
-    from src.database import get_session, Transaction
+    """Run LLM categorization for uncategorized txns in a background thread,
+    reporting live progress through the shared job tracker so the UI panel
+    shows 'Categorizing X/Y'. 100% local via Ollama."""
+    import re
+    import requests
+    from datetime import datetime
+
+    from src.database import get_session, Transaction, Category, JobRun
+    from src.config import get_llm_config
+    from src.job_tracker import reset_status, update_progress, mark_done, add_failed
+
     session = get_session()
-    _llm_categorize_uncategorized(session, account_id)
-    session.close()
+    try:
+        uncategorized = (
+            session.query(Transaction)
+            .filter(
+                Transaction.account_id == account_id,
+                Transaction.category_id == None,  # noqa: E711
+                Transaction.description != None,  # noqa: E711
+            )
+            .all()
+        )
+        if not uncategorized:
+            mark_done()
+            return
 
+        config = get_llm_config()
+        reset_status("import", len(uncategorized))
 
-def _llm_categorize_uncategorized(session, account_id: int):
-    from src.categorizer import categorize_batch_llm
-    uncategorized = session.query(Transaction).filter(Transaction.account_id == account_id, Transaction.category_id == None, Transaction.description != None).all()
-    if not uncategorized:
-        return
-    descriptions = [t.description for t in uncategorized if t.description]
-    if not descriptions:
-        return
-    results = categorize_batch_llm(descriptions)
-    for txn in uncategorized:
-        if txn.description and txn.description in results:
-            txn.category_id = results[txn.description]
-    session.commit()
+        job_run = JobRun(
+            source="import",
+            scope="uncategorized",
+            total=len(uncategorized),
+            model=config.get("model"),
+            started_at=datetime.utcnow(),
+        )
+        session.add(job_run)
+        session.commit()
+        job_run_id = job_run.id
+
+        all_cats = session.query(Category).all()
+        cat_names = [c.name for c in all_cats]
+        cat_map = {c.name.lower(): c.id for c in all_cats}
+
+        batch_size = 15
+        updated = 0
+        failed = 0
+
+        for i in range(0, len(uncategorized), batch_size):
+            batch = uncategorized[i:i + batch_size]
+            descriptions = [t.description for t in batch]
+            numbered = "\n".join(f"{j+1}. {d}" for j, d in enumerate(descriptions))
+            batch_matched = [False] * len(batch)
+
+            prompt = f"""Categorize each transaction into one of these categories:
+{', '.join(cat_names)}
+
+Transactions:
+{numbered}
+
+Reply with ONLY the number and category, one per line. Example:
+1. Dining
+2. Groceries"""
+
+            try:
+                response = requests.post(
+                    f"{config['base_url']}/api/generate",
+                    json={
+                        "model": config["model"],
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {"temperature": 0.1, "num_predict": 400},
+                    },
+                    timeout=60,
+                )
+                if response.status_code == 200:
+                    answer = response.json().get("response", "")
+                    for line in answer.strip().split("\n"):
+                        line = line.strip()
+                        if not line:
+                            continue
+                        m = re.match(r"^\s*(\d+)\s*[.):-]\s*(.+)$", line)
+                        if not m:
+                            continue
+                        try:
+                            idx = int(m.group(1)) - 1
+                            raw_cat = m.group(2).strip().rstrip(".").strip()
+                            cat_lower = raw_cat.lower()
+                            matched_id = None
+                            if cat_lower in cat_map:
+                                matched_id = cat_map[cat_lower]
+                            else:
+                                for cname_lower, cid in cat_map.items():
+                                    if cname_lower in cat_lower or cat_lower in cname_lower:
+                                        matched_id = cid
+                                        break
+                            if matched_id and 0 <= idx < len(batch):
+                                batch[idx].category_id = matched_id
+                                batch_matched[idx] = True
+                                updated += 1
+                        except (ValueError, IndexError):
+                            continue
+            except Exception:
+                pass
+
+            for j, matched in enumerate(batch_matched):
+                if not matched:
+                    failed += 1
+                    add_failed(batch[j].description or "(no description)", batch[j].amount)
+
+            session.commit()
+            update_progress(min(i + batch_size, len(uncategorized)), updated, failed)
+
+        jr = session.query(JobRun).filter(JobRun.id == job_run_id).first()
+        if jr:
+            jr.updated = updated
+            jr.failed = failed
+            jr.finished_at = datetime.utcnow()
+        session.commit()
+    finally:
+        session.close()
+        mark_done()

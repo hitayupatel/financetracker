@@ -85,6 +85,32 @@ CATEGORY_KEYWORDS = {
 }
 
 
+def categorize_by_keywords(description: str) -> Optional[int]:
+    """Keyword-only categorization (no LLM). Fast, safe to run synchronously."""
+    if not description:
+        return None
+
+    desc_lower = description.lower()
+    best_match = None
+    best_score = 0
+
+    for category_name, keywords in CATEGORY_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in desc_lower:
+                score = len(keyword)
+                if score > best_score:
+                    best_score = score
+                    best_match = category_name
+
+    if not best_match:
+        return None
+
+    session = get_session()
+    category = session.query(Category).filter(Category.name == best_match).first()
+    session.close()
+    return category.id if category else None
+
+
 def categorize_transaction(description: str) -> Optional[int]:
     """Auto-categorize via keywords, then LLM fallback."""
     if not description:

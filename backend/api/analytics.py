@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 from datetime import date
 
-from src.analytics import get_overview, get_top_expenses, get_income_sources
+from src.analytics import get_overview, get_top_expenses, get_income_sources, get_range_summary
 from src.transactions import (
     get_category_breakdown, get_daily_spending, get_spending_trend,
 )
@@ -14,6 +14,12 @@ router = APIRouter()
 @router.get("/overview")
 def overview(year: int, month: int):
     return get_overview(year, month)
+
+
+@router.get("/range-summary")
+def range_summary(start: str, end: str):
+    """Income/expense/net for an inclusive date range. Dates are ISO YYYY-MM-DD."""
+    return get_range_summary(date.fromisoformat(start), date.fromisoformat(end))
 
 
 @router.get("/category-breakdown")

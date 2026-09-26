@@ -8,7 +8,7 @@ import pandas as pd
 
 from src.config import load_config
 from src.database import get_session, Transaction, Account, is_duplicate_transaction
-from src.categorizer import categorize_transaction
+from src.categorizer import categorize_transaction, categorize_by_keywords
 
 
 COLUMN_MAPPINGS = {
@@ -276,7 +276,8 @@ def import_csv(
         if csv_category and csv_category.lower() != "nan":
             category_id = _map_csv_category(csv_category)
         if category_id is None:
-            category_id = categorize_transaction(description)
+            # Fast keyword-only pass during import; LLM runs in the background.
+            category_id = categorize_by_keywords(description)
 
         txn = Transaction(
             date=parsed_date,
