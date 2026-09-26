@@ -1,4 +1,4 @@
-# Finance Minister
+# Finance Master
 
 A local-first personal finance tracker. Import your bank and credit card statements, get spending automatically categorized (with help from a local LLM), track budgets, and ask an AI questions about your money. All data stays on your machine.
 
@@ -10,6 +10,7 @@ A local-first personal finance tracker. Import your bank and credit card stateme
 - **Accurate cash flow** — distinguishes real spending from internal transfers (credit card payments, moving money to savings/investments) so you don't double-count
 - **Budgets** — needs/wants/savings buckets with auto-suggestions based on your spending history, plus budget-vs-actual analysis and over-budget alerts
 - **Analytics** — monthly overview, category breakdown, daily spending, 12-month trends, all with drill-down and search
+- **Period summary** — year-to-date, relative presets (last 7/30/90 days, this month, last 12 months), and a custom absolute date range, showing income/expenses/net for any window
 - **AI chat** — ask questions about your finances, answered by a local LLM with your actual data as context
 
 ## Does It Have AI Capability?
@@ -23,8 +24,8 @@ Yes — and it is **100% local**. No financial data ever leaves your machine.
   2. **Finance chat** — a conversational assistant that receives your account balances, monthly summaries, and spending trends as context, then answers questions in natural language.
 
 Categorization is layered for speed and privacy:
-1. **Keyword matching** (instant, deterministic, no LLM) handles known merchants
-2. **Local LLM fallback** only for descriptions keywords miss
+1. **Keyword matching** (instant, deterministic, no LLM) handles known merchants — this is the only pass that runs synchronously during import, so imports return immediately
+2. **Local LLM fallback** for descriptions keywords miss — this runs as a **background job** after import so it never blocks the request or freezes the UI. A minimizable progress panel shows live `X / Y` categorized counts, and each run is recorded to the history log
 3. **Manual override** — change any category directly from the UI
 
 ## Architecture
@@ -58,9 +59,11 @@ financetracker/
 └── frontend/             React + TypeScript + Vite + TailwindCSS + Recharts
     └── src/
         ├── App.tsx       routes
-        ├── components/   Layout, TransactionList, CategorizationProgress
+        ├── components/   Layout, TransactionList, CategorizationProgress, RangeSummary, Icon
         └── pages/        Overview, Transactions, Accounts, Import, Analytics, Budget, Chat
 ```
+
+The UI uses the **Aurelian** design system — a tonal steel-blue palette, Manrope/Hanken Grotesk/JetBrains Mono typography, soft-elevation cards, and Material Symbols icons. The layout is a fixed 280px sidebar on desktop that collapses into a slide-in drawer (hamburger menu) on mobile.
 
 ## Backend Processing
 
@@ -71,8 +74,10 @@ financetracker/
 2. Per-bank format detection (columns, debit/credit vs single amount, statement institution)
 3. Each row typed: `expense`, `income`, `refund`, `transfer`, `investment`, or `savings` based on column signs and description keywords
 4. Duplicate detection (same date + amount + account) prevents re-import doubling
-5. Categorization: CSV's own category → keyword match → local LLM fallback (background thread)
+5. Categorization during import is **keyword-only** (CSV's own category → keyword match) so the request returns fast; anything left uncategorized is handled by a **background LLM job** with progress tracking
 6. Account balance recalculated
+
+**PDF parsing note:** bank checking statements often include a trailing running-balance column. The parsers capture the transaction *amount* (the first trailing number), not the balance, and fall back to a single-amount pattern when no balance column is present. CSV is the most reliable import path; PDF parsing is inherently more format-sensitive.
 
 **Transaction classification logic** avoids double-counting:
 - Credit card purchases → `expense` on that card
@@ -117,6 +122,8 @@ Base URL: `http://localhost:8000/api`
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/overview` | Monthly income/expense/refund/net/savings-rate (`year`, `month`) |
+| GET | `/range-summary` | Income/expense/net for an inclusive date range (`start`, `end` as ISO `YYYY-MM-DD`) — powers the Period Summary block |
+| GET | `/available-months` | Months with data, newest first (`?future=` for forward-looking pickers) |
 | GET | `/category-breakdown` | Spending per category (refunds netted out) |
 | GET | `/daily-spending` | Daily expense totals |
 | GET | `/trends` | Multi-month trend (`?months=12`) |
@@ -153,7 +160,7 @@ Interactive API docs available at `http://localhost:8000/docs` (FastAPI Swagger 
 React SPA (Vite dev server on port 5173) that talks to the FastAPI backend. In development, Vite proxies `/api/*` to `localhost:8000`.
 
 **Pages:**
-- **Overview** — month selector, income/expense/refund/net metrics (clickable to drill into transactions), category pie chart with drill-down, daily spending chart
+- **Overview** — a Period Summary block (year-to-date, relative presets, and custom absolute date range), month selector, net-cashflow hero with 6-month trend, income/expense/savings-rate/net-worth metrics (clickable to drill into transactions), spending donut, category breakdown, and a local-AI insight card
 - **Transactions** — filterable/searchable table, inline category dropdown, inline edit/delete, background re-evaluate with progress + run history
 - **Accounts** — net worth summary, add/edit accounts, recalculate balances
 - **Import** — upload CSV/PDF with preview before committing
@@ -189,7 +196,7 @@ ollama pull llama3.1
 
 ## Privacy
 
-- Database is local SQLite (`backend/data/finance.db`, gitignored)
+- Database is local SQLite (`backend/data/*.db`, gitignored — including any backups)
 - LLM is local via Ollama — no cloud API calls with your financial data
 - No external services receive transaction data
 
